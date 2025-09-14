@@ -41,3 +41,9 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 - Prisma
 - GenAi
 - Template For initial Setup 
+
+
+
+
+# What you can expect after using autofi ? 
+<img width="1103" height="783" alt="image" src="https://github.com/user-attachments/assets/7b885400-5032-464d-a5ed-d4e87b247fc6" />

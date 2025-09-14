@@ -7,21 +7,21 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 
 # ✨ Features
 
-Scraper – Automates data scraping and generates ready-to-use scripts.
+- Scraper – Automates data scraping and generates ready-to-use scripts.
 
-YouTube Studio Authentication – Secure integration for managing video uploads directly.
+- YouTube Studio Authentication – Secure integration for managing video uploads directly.
 
-Content Generation
+- Content Generation
 
-🔑 Auto-generate trendy keywords
+- 🔑 Auto-generate trendy keywords
 
-📝 Create optimized titles
+- 📝 Create optimized titles
 
-📄 Write engaging descriptions
+- 📄 Write engaging descriptions
 
-Thumbnail Generator – Instantly design custom thumbnails for videos.
+- Thumbnail Generator – Instantly design custom thumbnails for videos.
 
-Notification System – Sends an email or call once the setup or tasks are completed.
+- Notification System – Sends an email or call once the setup or tasks are completed.
 
 
 

@@ -11,6 +11,7 @@ import {
   IconBrandTwitter,
   IconBrandYoutube
 } from '@tabler/icons-react';
+import VideoUploader from '@/components/VideoUploader';
 
 export default function UploadChoice() {
   const [choice, setChoice] = useState<'video' | 'script' | null>(null);
@@ -61,11 +62,7 @@ export default function UploadChoice() {
               animate={{ opacity: 1, scale: 1 }}
               className='mt-4 flex flex-col gap-4'
             >
-              <input
-                type='file'
-                accept='video/*'
-                className='rounded-lg border p-2'
-              />
+              <VideoUploader />
               <Button onClick={() => setChoice(null)}>⬅ Back</Button>
             </motion.div>
           )}

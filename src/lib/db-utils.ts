@@ -76,6 +76,11 @@ export async function healthCheck() {
   try {
     await connectDB();
 
+    // Ensure database connection exists
+    if (!mongoose.connection.db) {
+      throw new Error('Database connection not established');
+    }
+
     // Ping the database
     const adminDb = mongoose.connection.db.admin();
     const result = await adminDb.ping();

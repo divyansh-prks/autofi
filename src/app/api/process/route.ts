@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   S3Client
 } from '@aws-sdk/client-s3';
+import { getJsonFromS3 } from '@/lib/S3';
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
@@ -52,7 +53,8 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    const fileUrl = `https://${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    const encodedKey = encodeURIComponent(key);
+    const fileUrl = `https://${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${encodedKey}`;
     console.log(`File uploaded successfully. URL: ${fileUrl}`);
 
     // Step 2: Start Transcription
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest) {
         TranscriptionJobName: jobName,
         LanguageCode: 'en-US',
         MediaFormat: mediaFormat,
-        Media: { MediaFileUri: fileUrl },
+        Media: { MediaFileUri: `s3://${process.env.S3_BUCKET}/${key}` },
         OutputBucketName: process.env.S3_BUCKET,
         OutputKey: `transcripts/${jobName}.json`
       })
@@ -109,6 +111,8 @@ export async function POST(req: NextRequest) {
 
       if (TranscriptionJob?.TranscriptionJobStatus === 'COMPLETED') {
         const transcriptUri = TranscriptionJob.Transcript?.TranscriptFileUri;
+        console.log('TranscriptionJob', TranscriptionJob);
+        console.log('transcriptUri', transcriptUri);
         if (transcriptUri) {
           try {
             // Try to fetch from the public URL first
@@ -117,22 +121,18 @@ export async function POST(req: NextRequest) {
             if (resp.ok) {
               const json = await resp.json();
               transcriptText = json.results.transcripts[0].transcript;
+              console.log('json format');
             } else {
               // If public URL fails, try to get from S3 directly
               console.log('Public URL failed, trying S3 direct access...');
               const s3Key = `transcripts/${jobName}.json`;
-              const s3Response = await s3.send(
-                new GetObjectCommand({
-                  Bucket: process.env.S3_BUCKET!,
-                  Key: s3Key
-                })
+              const json = await getJsonFromS3<any>(
+                process.env.S3_BUCKET!,
+                s3Key
               );
-
-              const s3Body = await s3Response.Body?.transformToString();
-              if (s3Body) {
-                const json = JSON.parse(s3Body);
-                transcriptText = json.results.transcripts[0].transcript;
-              }
+              transcriptText = json.results.transcripts[0].transcript;
+              console.log('s3 json format');
+              console.log(transcriptText);
             }
           } catch (error) {
             console.error('Error fetching transcript:', error);

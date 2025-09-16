@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = new OpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPEN_AI_KEY
+});
 
 export async function generateYouTubeMetadata(transcript: string) {
   // Fallback metadata generation without OpenAI
@@ -23,7 +26,7 @@ export async function generateYouTubeMetadata(transcript: string) {
     `;
 
     const res = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'meta-llama/llama-4-maverick:free',
       messages: [{ role: 'user', content: prompt }]
     });
 

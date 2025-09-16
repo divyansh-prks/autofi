@@ -22,7 +22,7 @@ export default function VideoUploader() {
     setResult(data);
     setLoading(false);
   };
-
+  console.log(result?.metadata?.fallback);
   return (
     <div className='mx-auto mt-6 max-w-xl rounded-lg border p-6 shadow'>
       <input
@@ -40,36 +40,47 @@ export default function VideoUploader() {
       </button>
 
       {result && (
-        <div className='mt-6 space-y-4'>
-          <div>
-            <h3 className='font-semibold'>Transcript:</h3>
-            <p className='text-sm text-gray-700'>{result.transcript}</p>
+        <div className='mt-6 grid grid-cols-1 gap-6 md:grid-cols-2'>
+          <div className='rounded-lg border p-4'>
+            <h3 className='mb-2 font-semibold'>Transcript</h3>
+            <div className='max-h-[420px] overflow-auto rounded bg-gray-50 p-3 text-sm text-gray-800'>
+              {result.transcript}
+            </div>
           </div>
 
-          <div>
-            <h3 className='font-semibold'>Generated Metadata:</h3>
-            {result.metadata.fallback ? (
+          <div className='overflow-auto rounded-lg border p-4 md:sticky md:top-4 md:h-fit'>
+            <h3 className='mb-2 font-semibold'>Generated Metadata</h3>
+            {result?.metadata?.fallback ? (
               <div className='space-y-4'>
                 <div>
-                  <h4 className='font-medium text-blue-600'>Title:</h4>
+                  <h4 className='font-medium text-blue-600'>Title</h4>
                   <p className='text-sm'>{result.metadata.fallback.title}</p>
                 </div>
                 <div>
-                  <h4 className='font-medium text-blue-600'>Description:</h4>
-                  <p className='text-sm'>
+                  <h4 className='font-medium text-blue-600'>Description</h4>
+                  <p className='text-sm whitespace-pre-wrap'>
                     {result.metadata.fallback.description}
                   </p>
                 </div>
                 <div>
-                  <h4 className='font-medium text-blue-600'>Tags:</h4>
-                  <p className='text-sm'>
-                    {result.metadata.fallback.tags.join(', ')}
-                  </p>
+                  <h4 className='font-medium text-blue-600'>Tags</h4>
+                  <div className='flex flex-wrap gap-2'>
+                    {result.metadata.fallback.tags.map(
+                      (tag: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className='rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700'
+                        >
+                          {tag}
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
                 {result.metadata.fallback.chapters &&
                   result.metadata.fallback.chapters.length > 0 && (
                     <div>
-                      <h4 className='font-medium text-blue-600'>Chapters:</h4>
+                      <h4 className='font-medium text-blue-600'>Chapters</h4>
                       <ul className='list-inside list-disc text-sm'>
                         {result.metadata.fallback.chapters.map(
                           (chapter: string, index: number) => (

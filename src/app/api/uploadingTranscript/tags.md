@@ -1,0 +1,1 @@
+time, now, need, study, going, can, lot, it's, used, finally, better, one, first, things, questions, understand, life, well, fact, minutes

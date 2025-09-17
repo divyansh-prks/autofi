@@ -143,7 +143,7 @@ export default function HomePage() {
                 </h3>
                 <p className='leading-relaxed text-gray-600'>
                   Discover trending YouTube video titles based on your keywords.
-                  Find what's working in your niche right now.
+                  Find what&apos;s working in your niche right now.
                 </p>
                 <div className='mt-4 text-sm font-medium text-pink-600'>
                   Search → Discover → Adapt

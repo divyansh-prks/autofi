@@ -50,6 +50,7 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 - Prisma
 - GenAi
 - Template For initial Setup 
+- PR reviewing - coderabbitai
 
 
 

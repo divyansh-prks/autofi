@@ -10,7 +10,7 @@ export default async function Page() {
 
   return (
     <main className='min-h-screen'>
-      <Navigation />
+      <Navigation userId={userId} />
       <Hero />
       <GSAPFeatures />
       <Dashboard />

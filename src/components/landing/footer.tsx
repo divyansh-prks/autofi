@@ -60,12 +60,9 @@ const Footer = () => {
               {['Features', 'Pricing', 'API', 'Integrations', 'Changelog'].map(
                 (item) => (
                   <li key={item}>
-                    <a
-                      href='#'
-                      className='text-muted-foreground hover:text-primary transition-colors'
-                    >
+                    <button className='text-muted-foreground hover:text-primary text-left transition-colors'>
                       {item}
-                    </a>
+                    </button>
                   </li>
                 )
               )}
@@ -84,12 +81,9 @@ const Footer = () => {
                 'Community'
               ].map((item) => (
                 <li key={item}>
-                  <a
-                    href='#'
-                    className='text-muted-foreground hover:text-primary transition-colors'
-                  >
+                  <button className='text-muted-foreground hover:text-primary text-left transition-colors'>
                     {item}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -102,24 +96,15 @@ const Footer = () => {
           </p>
 
           <div className='flex gap-6 text-sm'>
-            <a
-              href='#'
-              className='text-muted-foreground hover:text-primary transition-colors'
-            >
+            <button className='text-muted-foreground hover:text-primary transition-colors'>
               Privacy Policy
-            </a>
-            <a
-              href='#'
-              className='text-muted-foreground hover:text-primary transition-colors'
-            >
+            </button>
+            <button className='text-muted-foreground hover:text-primary transition-colors'>
               Terms of Service
-            </a>
-            <a
-              href='#'
-              className='text-muted-foreground hover:text-primary transition-colors'
-            >
+            </button>
+            <button className='text-muted-foreground hover:text-primary transition-colors'>
               Cookie Policy
-            </a>
+            </button>
           </div>
         </div>
       </div>

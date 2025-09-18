@@ -3,8 +3,13 @@
 import { Button } from '@/components/ui/button';
 import { Youtube, Menu } from 'lucide-react';
 import { useState } from 'react';
+import Link from 'next/link';
 
-const Navigation = () => {
+interface NavigationProps {
+  userId?: string | null;
+}
+
+const Navigation = ({ userId }: NavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -49,8 +54,18 @@ const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className='hidden items-center gap-4 md:flex'>
-            <Button variant='ghost'>Sign In</Button>
-            <Button variant='ghost'>Get Started</Button>
+            {userId ? (
+              <Link href='/dashboard'>
+                <Button variant='default'>Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Button variant='ghost'>Sign In</Button>
+                <Link href='/login'>
+                  <Button variant='default'>Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -92,12 +107,24 @@ const Navigation = () => {
               Docs
             </a>
             <div className='flex flex-col gap-2 pt-4'>
-              <Button variant='ghost' className='justify-start'>
-                Sign In
-              </Button>
-              <Button variant='ghost' className='justify-start'>
-                Get Started
-              </Button>
+              {userId ? (
+                <Link href='/dashboard'>
+                  <Button variant='ghost' className='justify-start'>
+                    Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Button variant='ghost' className='justify-start'>
+                    Sign In
+                  </Button>
+                  <Link href='/login'>
+                    <Button variant='default' className='justify-start'>
+                      Get Started
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

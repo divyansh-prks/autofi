@@ -8,7 +8,6 @@ interface VideoData {
   keyword: string;
 }
 
-// Filter out common words and short keywords
 function filterKeywords(keywords: string[]): string[] {
   const stopWords = new Set([
     'you',
@@ -83,7 +82,6 @@ function filterKeywords(keywords: string[]): string[] {
   );
 }
 
-// Parse view count from YouTube format (1.2M, 500K, etc.)
 function parseViewCount(viewText: string): number {
   if (!viewText) return 0;
 

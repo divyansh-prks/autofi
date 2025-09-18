@@ -12,7 +12,9 @@ const baseConfig: NextConfig = {
       }
     ]
   },
-  transpilePackages: ['geist']
+  transpilePackages: ['geist'],
+  // Keep heavy server-only packages external
+  serverExternalPackages: ['puppeteer']
 };
 
 let configWithPlugins = baseConfig;

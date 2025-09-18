@@ -17,14 +17,16 @@ export default function Providers({
   const { resolvedTheme } = useTheme();
 
   return (
-    <ActiveThemeProvider initialTheme={activeThemeValue}>
-      <ClerkProvider
-        appearance={{
-          baseTheme: resolvedTheme === 'dark' ? dark : undefined
-        }}
-      >
-        {children}
-      </ClerkProvider>
-    </ActiveThemeProvider>
+    <>
+      <ActiveThemeProvider initialTheme={activeThemeValue}>
+        <ClerkProvider
+          appearance={{
+            baseTheme: resolvedTheme === 'dark' ? dark : undefined
+          }}
+        >
+          {children}
+        </ClerkProvider>
+      </ActiveThemeProvider>
+    </>
   );
 }

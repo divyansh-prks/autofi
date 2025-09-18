@@ -1,115 +1,98 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/9113740/201498864-2a900c64-d88f-4ed4-b5cf-770bcb57e1f5.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/9113740/201498152-b171abb8-9225-487a-821c-6ff49ee48579.png">
-</picture>
+# What Is Autofi ?
+Autofi is a tool that automates the workflow for content creators, helping them upload their content with complete SEO optimization. This ensures their videos reach a wider audience and maximize revenue potential . 
 
-<div align="center"><strong>Next.js Admin Dashboard Starter Template With Shadcn-ui</strong></div>
-<div align="center">Built with the Next.js 15 App Router</div>
-<br />
-<div align="center">
-<a href="https://dub.sh/shadcn-dashboard">View Demo</a>
-<span>
-</div>
 
-## Overview
 
-This is a starter template using the following stack:
 
-- Framework - [Next.js 15](https://nextjs.org/13)
-- Language - [TypeScript](https://www.typescriptlang.org)
-- Auth - [Clerk](https://go.clerk.com/ILdYhn7)
-- Error tracking - [<picture><img alt="Sentry" src="public/assets/sentry.svg">
-        </picture>](https://sentry.io/for/nextjs/?utm_source=github&utm_medium=paid-community&utm_campaign=general-fy26q2-nextjs&utm_content=github-banner-project-tryfree)
-- Styling - [Tailwind CSS v4](https://tailwindcss.com)
-- Components - [Shadcn-ui](https://ui.shadcn.com)
-- Schema Validations - [Zod](https://zod.dev)
-- State Management - [Zustand](https://zustand-demo.pmnd.rs)
-- Search params state manager - [Nuqs](https://nuqs.47ng.com/)
-- Tables - [Tanstack Data Tables](https://ui.shadcn.com/docs/components/data-table) • [Dice table](https://www.diceui.com/docs/components/data-table)
-- Forms - [React Hook Form](https://ui.shadcn.com/docs/components/form)
-- Command+k interface - [kbar](https://kbar.vercel.app/)
-- Linting - [ESLint](https://eslint.org)
-- Pre-commit Hooks - [Husky](https://typicode.github.io/husky/)
-- Formatting - [Prettier](https://prettier.io)
 
-_If you are looking for a Tanstack start dashboard template, here is the [repo](https://git.new/tanstack-start-dashboard)._
+# ✨ Features
 
-## Pages
+- Scraper – Automates data scraping and generates ready-to-use scripts.
 
-| Pages                                                                                 | Specifications                                                                                                                                                                                                                                                          |
-| :------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Signup / Signin](https://go.clerk.com/ILdYhn7)      | Authentication with **Clerk** provides secure authentication and user management with multiple sign-in options including passwordless authentication, social logins, and enterprise SSO - all designed to enhance security while delivering a seamless user experience. |
-| [Dashboard (Overview)](https://shadcn-dashboard.kiranism.dev/dashboard)    | Cards with Recharts graphs for analytics. Parallel routes in the overview sections feature independent loading, error handling, and isolated component rendering. |
-| [Product](https://shadcn-dashboard.kiranism.dev/dashboard/product)         | Tanstack tables with server side searching, filter, pagination by Nuqs which is a Type-safe search params state manager in nextjs                                                                                                                                       |
-| [Product/new](https://shadcn-dashboard.kiranism.dev/dashboard/product/new) | A Product Form with shadcn form (react-hook-form + zod).                                                                                                                                                                                                                |
-| [Profile](https://shadcn-dashboard.kiranism.dev/dashboard/profile)         | Clerk's full-featured account management UI that allows users to manage their profile and security settings                                                                                                                                                             |
-| [Kanban Board](https://shadcn-dashboard.kiranism.dev/dashboard/kanban)     | A Drag n Drop task management board with dnd-kit and zustand to persist state locally.                                                                                                                                                                                  |
-| [Not Found](https://shadcn-dashboard.kiranism.dev/dashboard/notfound)      | Not Found Page Added in the root level                                                                                                                                                                                                                                  |
-| [Global Error](https://sentry.io/for/nextjs/?utm_source=github&utm_medium=paid-community&utm_campaign=general-fy26q2-nextjs&utm_content=github-banner-project-tryfree)           | A centralized error page that captures and displays errors across the application. Integrated with **Sentry** to log errors, provide detailed reports, and enable replay functionality for better debugging. |
+- YouTube Studio Authentication – Secure integration for managing video uploads directly.
 
-## Feature based organization
+- Content Generation
 
-```plaintext
-src/
-├── app/ # Next.js App Router directory
-│ ├── (auth)/ # Auth route group
-│ │ ├── (signin)/
-│ ├── (dashboard)/ # Dashboard route group
-│ │ ├── layout.tsx
-│ │ ├── loading.tsx
-│ │ └── page.tsx
-│ └── api/ # API routes
-│
-├── components/ # Shared components
-│ ├── ui/ # UI components (buttons, inputs, etc.)
-│ └── layout/ # Layout components (header, sidebar, etc.)
-│
-├── features/ # Feature-based modules
-│ ├── feature/
-│ │ ├── components/ # Feature-specific components
-│ │ ├── actions/ # Server actions
-│ │ ├── schemas/ # Form validation schemas
-│ │ └── utils/ # Feature-specific utilities
-│ │
-├── lib/ # Core utilities and configurations
-│ ├── auth/ # Auth configuration
-│ ├── db/ # Database utilities
-│ └── utils/ # Shared utilities
-│
-├── hooks/ # Custom hooks
-│ └── use-debounce.ts
-│
-├── stores/ # Zustand stores
-│ └── dashboard-store.ts
-│
-└── types/ # TypeScript types
-└── index.ts
-```
+- 🔑 Auto-generate trendy keywords
 
-## Getting Started
+- 📝 Create optimized titles
 
-> [!NOTE]  
-> We are using **Next 15** with **React 19**, follow these steps:
+- 📄 Write engaging descriptions
 
-Clone the repo:
+- Thumbnail Generator – Instantly design custom thumbnails for videos.
 
-```
-git clone https://github.com/Kiranism/next-shadcn-dashboard-starter.git
-```
+- Notification System – Sends an email or call once the setup or tasks are completed.
 
-- `pnpm install` ( we have legacy-peer-deps=true added in the .npmrc)
-- Create a `.env.local` file by copying the example environment file:
-  `cp env.example.txt .env.local`
-- Add the required environment variables to the `.env.local` file.
-- `pnpm run dev`
 
-##### Environment Configuration Setup
 
-To configure the environment for this project, refer to the `env.example.txt` file. This file contains the necessary environment variables required for authentication and error tracking.
 
-You should now be able to access the application at http://localhost:3000.
 
-> [!WARNING]
-> After cloning or forking the repository, be cautious when pulling or syncing with the latest changes, as this may result in breaking conflicts.
+# Flow of the project - 
 
-Cheers! 🥂
+<img width="1405" height="702" alt="image" src="https://github.com/user-attachments/assets/144617a5-460e-4d36-87f5-00937858725a" />
+
+
+
+# Frontend ENDPOINTS
+<img width="1344" height="676" alt="image" src="https://github.com/user-attachments/assets/b00d2f87-ec77-430f-8ce5-199bf465bb47" />
+
+# Backend ENDPOINTS
+<img width="1341" height="368" alt="image" src="https://github.com/user-attachments/assets/530e06a4-2efc-4434-be51-dcdc8a8c877f" />
+
+
+
+
+
+
+## Tech Stack - 
+- Typescript
+- Nextjs
+- Prisma
+- GenAi
+- Template For initial Setup 
+- PR reviewing - coderabbitai
+
+
+
+
+# What you can expect after using autofi ? 
+<img width="1103" height="783" alt="image" src="https://github.com/user-attachments/assets/7b885400-5032-464d-a5ed-d4e87b247fc6" />
+
+
+
+
+
+# Our BrainStorming Flow 
+<img width="1729" height="774" alt="image" src="https://github.com/user-attachments/assets/548f3091-51a9-48da-afae-fd2ee4635de5" />
+
+
+
+
+
+## 🚀 Installation & Setup
+
+Follow the steps below to run the project locally:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/divyansh-prks/autofi
+
+
+2. Navigate into the project folder:
+    ```bash
+    cd autofi
+
+3. Install dependencies:
+    ```bash
+    npm install
+
+4. Install TypeScript globally (if not already installed):
+    ```bash
+    npm install -g typescript
+
+5. Start the development server:
+   ```bash
+    npm run dev
+   
+
+   

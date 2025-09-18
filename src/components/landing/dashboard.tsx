@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Play, TrendingUp, Eye, Clock } from 'lucide-react';
-import dashboardPreview from '../../public/assets/dashboard-preview.jpg';
 import Image from 'next/image';
+
 const Dashboard = () => {
   return (
     <section className='relative overflow-hidden px-6 py-24'>
@@ -91,9 +91,12 @@ const Dashboard = () => {
           <div className='relative'>
             <div className='glass border-primary/20 rounded-2xl border p-6'>
               <Image
-                src={dashboardPreview}
+                src='/dashboard.jpg'
                 alt='YouTube AI Dashboard Preview'
                 className='w-full rounded-xl shadow-2xl'
+                width={600}
+                height={400}
+                priority
               />
 
               {/* Floating elements */}

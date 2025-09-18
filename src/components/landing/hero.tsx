@@ -1,17 +1,18 @@
 import { Button } from '@/components/ui/button';
 import { Play, Zap, BarChart3 } from 'lucide-react';
-import VideoDemo from './VideoDemo';
-import heroBg from '../../public/assets/hero-bg (1).jpg';
+import VideoDemo from '../VideoDemo';
 import Image from 'next/image';
+
 const Hero = () => {
   return (
     <section className='relative flex min-h-screen items-center justify-center overflow-hidden'>
       {/* Background with overlay */}
       <div className='absolute inset-0 z-0'>
         <Image
-          src={heroBg}
+          src='/hero-bg.jpg'
           alt='AI automation background'
           className='h-full w-full object-cover'
+          fill
         />
         <div className='bg-background/80 absolute inset-0 backdrop-blur-sm' />
       </div>

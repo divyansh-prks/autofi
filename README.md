@@ -33,8 +33,13 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 
 
 
-# API ENDPOINTS
+# Frontend ENDPOINTS
 <img width="1344" height="676" alt="image" src="https://github.com/user-attachments/assets/b00d2f87-ec77-430f-8ce5-199bf465bb47" />
+
+# Backend ENDPOINTS
+<img width="1341" height="368" alt="image" src="https://github.com/user-attachments/assets/530e06a4-2efc-4434-be51-dcdc8a8c877f" />
+
+
 
 
 
@@ -53,6 +58,41 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 <img width="1103" height="783" alt="image" src="https://github.com/user-attachments/assets/7b885400-5032-464d-a5ed-d4e87b247fc6" />
 
 
+
+
+
 # Our BrainStorming Flow 
 <img width="1729" height="774" alt="image" src="https://github.com/user-attachments/assets/548f3091-51a9-48da-afae-fd2ee4635de5" />
+
+
+
+
+
+## 🚀 Installation & Setup
+
+Follow the steps below to run the project locally:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/divyansh-prks/autofi
+
+
+2. Navigate into the project folder:
+    ```bash
+    cd autofi
+
+3. Install dependencies:
+    ```bash
+    npm install
+
+4. Install TypeScript globally (if not already installed):
+    ```bash
+    npm install -g typescript
+
+5. Start the development server:
+   ```bash
+    npm run dev
+   
+
+   
 

@@ -51,3 +51,8 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 
 # What you can expect after using autofi ? 
 <img width="1103" height="783" alt="image" src="https://github.com/user-attachments/assets/7b885400-5032-464d-a5ed-d4e87b247fc6" />
+
+
+# Our BrainStorming Flow 
+<img width="1729" height="774" alt="image" src="https://github.com/user-attachments/assets/548f3091-51a9-48da-afae-fd2ee4635de5" />
+

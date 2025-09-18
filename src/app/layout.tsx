@@ -16,8 +16,8 @@ const META_THEME_COLORS = {
 };
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn',
-  description: 'Basic dashboard with Next.js and Shadcn'
+  title: 'AutoFi',
+  description: 'Youtube content seo optimization tool'
 };
 
 export const viewport: Viewport = {

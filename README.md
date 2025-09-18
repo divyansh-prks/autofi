@@ -33,6 +33,10 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 
 
 
+# API ENDPOINTS
+<img width="1344" height="676" alt="image" src="https://github.com/user-attachments/assets/b00d2f87-ec77-430f-8ce5-199bf465bb47" />
+
+
 
 
 ## Tech Stack - 

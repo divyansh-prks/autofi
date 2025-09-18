@@ -362,7 +362,11 @@ export async function POST(req: NextRequest) {
 
     const textForComprehend = text.slice(0, 4500);
     let keywords: any[] = [];
-    let meta = { awsComprehend: false, context: null, audience: null };
+    let meta = { awsComprehend: false, context: null, audience: null } as {
+      awsComprehend: boolean;
+      context: string | null;
+      audience: string | null;
+    };
 
     // Detect content context for audience targeting
     const contentContext = detectContentContext(text);

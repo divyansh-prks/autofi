@@ -97,7 +97,7 @@ export default function UploadChoice() {
               animate={{ opacity: 1, scale: 1 }}
               className='mt-4 flex flex-col gap-4'
             >
-              <VideoUploader onTranscriptGenerated={setTranscriptText} />
+              <VideoUploader />
 
               {/* Show Transcript Box Only After Generation */}
               {transcriptText && (

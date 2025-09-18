@@ -359,12 +359,12 @@ export async function POST(req: NextRequest) {
     // Handle different input formats
     if (typeof body.keywords === 'string') {
       // If it's a string, split by comma or newline
-      keywords = body.keywords
+      keywords = (body.keywords as string)
         .split(/[,\n]/)
         .map((k) => k.trim())
         .filter((k) => k.length > 0);
     } else if (Array.isArray(body.keywords)) {
-      keywords = body.keywords.filter(
+      keywords = (body.keywords as string[]).filter(
         (k) => typeof k === 'string' && k.trim().length > 0
       );
     } else {

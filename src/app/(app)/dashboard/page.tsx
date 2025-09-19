@@ -1,112 +1,149 @@
 'use client';
-import type React from 'react';
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Play, Youtube, Brain } from 'lucide-react';
-import type { OptimizationSuggestions } from '@/lib/ai-optimizer';
-import { useRouter } from 'next/navigation';
-interface VideoData {
-  id: string;
-  url: string;
-  title: string;
-  thumbnail: string;
-  status: 'processing' | 'completed' | 'error';
-  progress: number;
-  suggestions?: OptimizationSuggestions;
-}
+import { Youtube, Loader2, Brain, Play } from 'lucide-react';
+import { useVideoUpload } from '@/hooks/use-video-upload';
+import { useVideoPolling, type VideoStatus } from '@/hooks/use-video-polling';
 
 export default function Dashboard() {
-  const router = useRouter();
+  const [videos, setVideos] = useState<VideoStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [processingVideoId, setProcessingVideoId] = useState<string | null>(
+    null
+  );
 
-  const [videos, setVideos] = useState<VideoData[]>([]);
-  const [file, setFile] = useState<File | null>(null);
-  const [ytUrl, setYtUrl] = useState('');
-  const [ytLoading, setYtLoading] = useState(false);
+  // Video upload hook
+  const { uploading, uploadProgress, uploadFile, submitYouTubeUrl } =
+    useVideoUpload({
+      onSuccess: (videoId) => {
+        setProcessingVideoId(videoId);
+        fetchVideos(); // Refresh the list
+      },
+      onError: (error) => {
+        alert(error);
+      }
+    });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) {
-      alert('Please choose a video file');
-      return;
+  // Video polling hook for the currently processing video
+  useVideoPolling(processingVideoId, {
+    enabled: !!processingVideoId,
+    onComplete: () => {
+      setProcessingVideoId(null);
+      fetchVideos(); // Refresh the list when processing completes
+    },
+    onError: () => {
+      // Log error and reset processing state
+      setProcessingVideoId(null);
     }
-    const form = new FormData();
-    form.append('file', file);
+  });
+
+  const fetchVideos = async () => {
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      const newId = data.id || data.key || data.fileUrl;
-      const newVideo: VideoData = {
-        id: newId,
-        url: data.fileUrl,
-        title: 'Transcribing...',
-        thumbnail: '/placeholder.svg',
-        status: 'processing',
-        progress: 0
-      };
-      setVideos((prev) => [newVideo, ...prev]);
-      router.push(`/video/${encodeURIComponent(newId)}`);
-    } catch (err) {
-      alert((err as Error).message);
+      const response = await fetch('/api/videos?limit=20');
+      if (response.ok) {
+        const data = await response.json();
+        setVideos(data.videos);
+      }
+    } catch (error) {
+      // Silent fail
+    } finally {
+      setLoading(false);
     }
   };
 
-  const extractYouTubeId = (url: string): string | null => {
-    try {
-      const u = new URL(url);
-      if (u.hostname.includes('youtu.be')) {
-        return u.pathname.slice(1) || null;
-      }
-      if (u.hostname.includes('youtube.com')) {
-        const v = u.searchParams.get('v');
-        if (v) return v;
-        // Shorts or other paths
-        const parts = u.pathname.split('/').filter(Boolean);
-        if (parts[0] === 'shorts' && parts[1]) return parts[1];
-      }
-    } catch {}
-    return null;
-  };
+  useEffect(() => {
+    fetchVideos();
+  }, []);
 
   const handleYouTubeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ytUrl) return;
-    setYtLoading(true);
+    if (!youtubeUrl.trim()) return;
+
     try {
-      const res = await fetch('/api/process-youtube', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: ytUrl })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed to process URL');
-
-      const vid = extractYouTubeId(ytUrl) || ytUrl;
-      const thumb = extractYouTubeId(ytUrl)
-        ? `https://img.youtube.com/vi/${extractYouTubeId(ytUrl)}/hqdefault.jpg`
-        : '/placeholder.svg';
-      const title = data?.metadata?.fallback?.title || 'YouTube Video';
-
-      const newVideo: VideoData = {
-        id: vid,
-        url: ytUrl,
-        title,
-        thumbnail: thumb,
-        status: 'completed',
-        progress: 100
-      };
-      setVideos((prev) => [newVideo, ...prev]);
-    } catch (err) {
-      alert((err as Error).message);
-    } finally {
-      setYtLoading(false);
+      await submitYouTubeUrl(youtubeUrl.trim());
+      setYoutubeUrl('');
+    } catch (error) {
+      // Error already handled by hook
     }
   };
+
+  const handleFileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+
+    try {
+      await uploadFile(selectedFile);
+      setSelectedFile(null);
+      // Reset the file input
+      const fileInput = document.querySelector(
+        'input[type="file"]'
+      ) as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      // Error already handled by hook
+    }
+  };
+
+  const getVideoStatus = (video: VideoStatus) => {
+    if (
+      [
+        'pending',
+        'transcribing',
+        'generating_keywords',
+        'researching_titles',
+        'optimizing_content'
+      ].includes(video.status)
+    ) {
+      return 'processing';
+    }
+    return video.status;
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'processing':
+        return (
+          <Badge className='bg-secondary text-secondary-foreground border-0'>
+            Processing
+          </Badge>
+        );
+      case 'completed':
+        return (
+          <Badge className='bg-accent text-accent-foreground border-0'>
+            Ready
+          </Badge>
+        );
+      case 'failed':
+        return (
+          <Badge variant='destructive' className='border-0'>
+            Failed
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className='container mx-auto px-4 py-8'>
+        <div className='flex h-64 items-center justify-center'>
+          <div className='text-center'>
+            <Loader2 className='text-muted-foreground mx-auto mb-4 h-8 w-8 animate-spin' />
+            <p>Loading videos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='bg-background min-h-screen'>
@@ -136,16 +173,17 @@ export default function Dashboard() {
                       id='youtube-url'
                       type='url'
                       placeholder='https://www.youtube.com/watch?v=...'
-                      value={ytUrl}
-                      onChange={(e) => setYtUrl(e.target.value)}
+                      value={youtubeUrl}
+                      onChange={(e) => setYoutubeUrl(e.target.value)}
                       className='text-base'
+                      disabled={uploading}
                     />
                     <Button
                       type='submit'
-                      disabled={!ytUrl || ytLoading}
+                      disabled={!youtubeUrl.trim() || uploading}
                       className='whitespace-nowrap'
                     >
-                      {ytLoading ? 'Processing…' : 'Analyze URL'}
+                      {uploading ? 'Processing…' : 'Analyze URL'}
                     </Button>
                   </div>
                   <p className='text-muted-foreground text-xs'>
@@ -159,7 +197,7 @@ export default function Dashboard() {
           {/* File Upload Form */}
           <Card className='border-primary/20 from-card to-muted/20 border-2 border-dashed bg-gradient-to-br'>
             <CardContent className='p-6'>
-              <form onSubmit={handleSubmit} className='space-y-4'>
+              <form onSubmit={handleFileSubmit} className='space-y-4'>
                 <div className='space-y-2'>
                   <label htmlFor='video-file' className='text-sm font-medium'>
                     Upload Video File
@@ -168,16 +206,32 @@ export default function Dashboard() {
                     id='video-file'
                     type='file'
                     accept='video/*'
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    onChange={(e) =>
+                      setSelectedFile(e.target.files?.[0] || null)
+                    }
                     className='text-base'
+                    disabled={uploading}
                   />
                   <p className='text-muted-foreground text-xs'>
                     Select a video to upload and transcribe
                   </p>
                 </div>
-                <Button type='submit' className='w-full gap-2' size='lg'>
+                {uploading && uploadProgress > 0 && (
+                  <div className='space-y-2'>
+                    <Progress value={uploadProgress} className='bg-muted h-2' />
+                    <p className='text-muted-foreground text-sm'>
+                      Uploading... {uploadProgress}%
+                    </p>
+                  </div>
+                )}
+                <Button
+                  type='submit'
+                  className='w-full gap-2'
+                  size='lg'
+                  disabled={!selectedFile || uploading}
+                >
                   <Brain className='h-5 w-5' />
-                  Analyze & Optimize
+                  {uploading ? 'Uploading...' : 'Analyze & Optimize'}
                 </Button>
               </form>
             </CardContent>
@@ -199,97 +253,101 @@ export default function Dashboard() {
               </Button>
             </div>
             <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
-              {videos.map((video) => (
-                <Card
-                  key={video.id}
-                  className={`cursor-pointer border-2 transition-all duration-300 hover:shadow-xl ${
-                    video.status === 'completed'
-                      ? 'border-accent/20 hover:border-accent/40 hover:scale-[1.02]'
-                      : video.status === 'processing'
-                        ? 'border-secondary/20 hover:border-secondary/40'
-                        : 'border-primary/20 hover:border-primary/40'
-                  } from-card to-card/80 bg-gradient-to-br`}
-                  onClick={() => {
-                    if (video.status === 'completed') {
-                      window.location.href = `/video/${video.id}`;
-                    }
-                  }}
-                >
-                  <CardHeader className='p-0'>
-                    <div className='bg-muted relative aspect-video overflow-hidden rounded-t-lg'>
-                      <Image
-                        src={video.thumbnail || '/placeholder.svg'}
-                        alt={video.title}
-                        className='h-full w-full object-cover'
-                        width={400}
-                        height={225}
-                      />
-                      {video.status === 'processing' && (
-                        <div className='from-secondary/80 to-secondary/60 absolute inset-0 flex items-center justify-center bg-gradient-to-br'>
-                          <div className='text-center text-white'>
-                            <div className='mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent' />
-                            <p className='text-sm font-medium'>Processing...</p>
+              {videos.map((video) => {
+                const status = getVideoStatus(video);
+                return (
+                  <Card
+                    key={video.id}
+                    className={`cursor-pointer border-2 transition-all duration-300 hover:shadow-xl ${
+                      status === 'completed'
+                        ? 'border-accent/20 hover:border-accent/40 hover:scale-[1.02]'
+                        : status === 'processing'
+                          ? 'border-secondary/20 hover:border-secondary/40'
+                          : 'border-primary/20 hover:border-primary/40'
+                    } from-card to-card/80 bg-gradient-to-br`}
+                    onClick={() => {
+                      if (status === 'completed') {
+                        window.location.href = `/video/${video.id}`;
+                      }
+                    }}
+                  >
+                    <CardHeader className='p-0'>
+                      <div className='bg-muted relative aspect-video overflow-hidden rounded-t-lg'>
+                        <Image
+                          src={video.thumbnail || '/placeholder.svg'}
+                          alt={video.title || 'Video thumbnail'}
+                          className='h-full w-full object-cover'
+                          width={400}
+                          height={225}
+                        />
+                        {status === 'processing' && (
+                          <div className='from-secondary/80 to-secondary/60 absolute inset-0 flex items-center justify-center bg-gradient-to-br'>
+                            <div className='text-center text-white'>
+                              <div className='mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent' />
+                              <p className='text-sm font-medium'>
+                                Processing...
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {video.status === 'completed' && (
-                        <div className='from-accent/0 to-accent/20 hover:from-accent/20 hover:to-accent/40 absolute inset-0 flex items-center justify-center bg-gradient-to-br opacity-0 transition-all duration-300 hover:opacity-100'>
-                          <Play className='h-12 w-12 text-white drop-shadow-lg' />
-                        </div>
-                      )}
-                      <div className='absolute top-3 right-3'>
-                        {video.status === 'processing' && (
-                          <Badge className='bg-secondary text-secondary-foreground border-0'>
-                            Processing
-                          </Badge>
                         )}
-                        {video.status === 'completed' && (
-                          <Badge className='bg-accent text-accent-foreground border-0'>
-                            Ready
-                          </Badge>
+                        {status === 'completed' && (
+                          <div className='from-accent/0 to-accent/20 hover:from-accent/20 hover:to-accent/40 absolute inset-0 flex items-center justify-center bg-gradient-to-br opacity-0 transition-all duration-300 hover:opacity-100'>
+                            <Play className='h-12 w-12 text-white drop-shadow-lg' />
+                          </div>
+                        )}
+                        <div className='absolute top-3 right-3'>
+                          {getStatusBadge(status)}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className='p-5'>
+                      <div className='space-y-3'>
+                        <h4 className='line-clamp-2 leading-tight font-semibold text-balance'>
+                          {video.title || 'Processing...'}
+                        </h4>
+
+                        {status === 'processing' && (
+                          <div className='space-y-3'>
+                            <Progress
+                              value={video.progress}
+                              className='bg-muted h-2'
+                            />
+                            <p className='text-muted-foreground flex items-center gap-2 text-sm'>
+                              <Brain className='text-secondary h-4 w-4' />
+                              Analyzing content... {video.progress}%
+                            </p>
+                          </div>
+                        )}
+
+                        {status === 'completed' && (
+                          <div className='space-y-2'>
+                            <div className='flex items-center gap-2'>
+                              <Badge
+                                variant='outline'
+                                className='border-accent/30 text-accent gap-1'
+                              >
+                                <Brain className='h-3 w-3' />
+                                AI Analysis Complete
+                              </Badge>
+                            </div>
+                            <p className='text-muted-foreground text-sm'>
+                              Click to view optimization suggestions
+                            </p>
+                          </div>
+                        )}
+
+                        {status === 'failed' && (
+                          <div className='space-y-2'>
+                            <p className='text-destructive text-sm'>
+                              {video.errorMessage || 'Processing failed'}
+                            </p>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='p-5'>
-                    <div className='space-y-3'>
-                      <h4 className='line-clamp-2 leading-tight font-semibold text-balance'>
-                        {video.title}
-                      </h4>
-
-                      {video.status === 'processing' && (
-                        <div className='space-y-3'>
-                          <Progress
-                            value={video.progress}
-                            className='bg-muted h-2'
-                          />
-                          <p className='text-muted-foreground flex items-center gap-2 text-sm'>
-                            <Brain className='text-secondary h-4 w-4' />
-                            Analyzing content... {video.progress}%
-                          </p>
-                        </div>
-                      )}
-
-                      {video.status === 'completed' && (
-                        <div className='space-y-2'>
-                          <div className='flex items-center gap-2'>
-                            <Badge
-                              variant='outline'
-                              className='border-accent/30 text-accent gap-1'
-                            >
-                              <Brain className='h-3 w-3' />
-                              AI Analysis Complete
-                            </Badge>
-                          </div>
-                          <p className='text-muted-foreground text-sm'>
-                            Click to view optimization suggestions
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         ) : (

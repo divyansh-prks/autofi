@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SignOutButton, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { Settings, Youtube } from 'lucide-react';
+import { Settings, Youtube, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 export function UserNav({
@@ -27,9 +27,9 @@ export function UserNav({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className='flex cursor-pointer items-center gap-2'>
-            <Avatar>
+            <Avatar className='border-primary/20 h-10 w-10 border-2'>
               <AvatarImage
-                src={user?.imageUrl || ''}
+                src={user?.imageUrl || '/placeholder.svg'}
                 alt={user?.fullName || ''}
               />
               <AvatarFallback className='rounded-lg'>
@@ -64,21 +64,22 @@ export function UserNav({
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuGroup>
+          <DropdownMenuGroup className='hover:bg-red-500 hover:text-white focus:bg-red-500 focus:text-white'>
             <DropdownMenuItem onClick={() => router.push('/settings')}>
-              <Settings />
+              <Settings className='hover:text-white' />
               Settings
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuGroup>
+          <DropdownMenuGroup className='hover:bg-red-500 hover:text-white focus:bg-red-500 focus:text-white'>
             <DropdownMenuItem onClick={() => setShowYouTubeSettings(true)}>
-              <Youtube />
+              <Youtube className='hover:text-white' />
               YouTube Studio
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem className='hover:bg-red-500 hover:text-white focus:bg-red-500 focus:text-white'>
+            <LogOut className='hover:text-white' />
             <SignOutButton redirectUrl='/login' />
           </DropdownMenuItem>
         </DropdownMenuContent>

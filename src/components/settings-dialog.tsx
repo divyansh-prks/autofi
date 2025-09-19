@@ -124,7 +124,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-2xl'>
+      <DialogContent className='sm:max-w-4xl'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <Youtube className='text-primary h-5 w-5' />

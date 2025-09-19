@@ -17,9 +17,82 @@ export interface IGeneratedContent {
   keywords?: string[];
   seoKeywords?: string[];
   youtubeTitles?: string[];
-  suggestedTitles?: string[];
-  suggestedDescription?: string;
+  suggestedTitles?: Array<{
+    title: string;
+    score: number;
+    reasoning: string;
+    viralityIncrease: number;
+    seoImprovement: number;
+  }>;
+  suggestedDescriptions?: Array<{
+    description: string;
+    score: number;
+    reasoning: string;
+    viralityIncrease: number;
+    seoImprovement: number;
+  }>;
+  suggestedDescription?: string; // Keep for backward compatibility
   tags?: string[];
+  analytics?: {
+    currentViews: string;
+    predictedViews: string;
+    viralityScore: number;
+    seoScore: number;
+    engagementPrediction: string;
+    competitorAnalysis: string;
+  };
+  viralityMetrics?: {
+    viralityScore: number;
+    seoScore: number;
+    engagementPrediction: number;
+    shareabilityScore: number;
+    trendingPotential: number;
+    audienceMatch: number;
+    competitorComparison: {
+      better: number;
+      similar: number;
+      worse: number;
+    };
+    keyFactors: Array<{
+      factor: string;
+      impact: 'high' | 'medium' | 'low';
+      score: number;
+      description: string;
+    }>;
+    predictions: {
+      views24h: string;
+      views7d: string;
+      views30d: string;
+      peakTime: string;
+      plateauTime: string;
+    };
+  };
+  originalMetrics?: {
+    viralityScore: number;
+    seoScore: number;
+    engagementPrediction: number;
+    shareabilityScore: number;
+    trendingPotential: number;
+    audienceMatch: number;
+    competitorComparison: {
+      better: number;
+      similar: number;
+      worse: number;
+    };
+    keyFactors: Array<{
+      factor: string;
+      impact: 'high' | 'medium' | 'low';
+      score: number;
+      description: string;
+    }>;
+    predictions: {
+      views24h: string;
+      views7d: string;
+      views30d: string;
+      peakTime: string;
+      plateauTime: string;
+    };
+  };
 }
 
 // Video document interface
@@ -78,8 +151,20 @@ const GeneratedContentSchema = new Schema(
     ],
     suggestedTitles: [
       {
-        type: String,
-        trim: true
+        title: { type: String, trim: true },
+        score: { type: Number },
+        reasoning: { type: String, trim: true },
+        viralityIncrease: { type: Number },
+        seoImprovement: { type: Number }
+      }
+    ],
+    suggestedDescriptions: [
+      {
+        description: { type: String, trim: true },
+        score: { type: Number },
+        reasoning: { type: String, trim: true },
+        viralityIncrease: { type: Number },
+        seoImprovement: { type: Number }
       }
     ],
     suggestedDescription: {
@@ -91,7 +176,71 @@ const GeneratedContentSchema = new Schema(
         type: String,
         trim: true
       }
-    ]
+    ],
+    analytics: {
+      currentViews: { type: String },
+      predictedViews: { type: String },
+      viralityScore: { type: Number },
+      seoScore: { type: Number },
+      engagementPrediction: { type: String },
+      competitorAnalysis: { type: String }
+    },
+    viralityMetrics: {
+      viralityScore: { type: Number },
+      seoScore: { type: Number },
+      engagementPrediction: { type: Number },
+      shareabilityScore: { type: Number },
+      trendingPotential: { type: Number },
+      audienceMatch: { type: Number },
+      competitorComparison: {
+        better: { type: Number },
+        similar: { type: Number },
+        worse: { type: Number }
+      },
+      keyFactors: [
+        {
+          factor: { type: String },
+          impact: { type: String, enum: ['high', 'medium', 'low'] },
+          score: { type: Number },
+          description: { type: String }
+        }
+      ],
+      predictions: {
+        views24h: { type: String },
+        views7d: { type: String },
+        views30d: { type: String },
+        peakTime: { type: String },
+        plateauTime: { type: String }
+      }
+    },
+    originalMetrics: {
+      viralityScore: { type: Number },
+      seoScore: { type: Number },
+      engagementPrediction: { type: Number },
+      shareabilityScore: { type: Number },
+      trendingPotential: { type: Number },
+      audienceMatch: { type: Number },
+      competitorComparison: {
+        better: { type: Number },
+        similar: { type: Number },
+        worse: { type: Number }
+      },
+      keyFactors: [
+        {
+          factor: { type: String },
+          impact: { type: String, enum: ['high', 'medium', 'low'] },
+          score: { type: Number },
+          description: { type: String }
+        }
+      ],
+      predictions: {
+        views24h: { type: String },
+        views7d: { type: String },
+        views30d: { type: String },
+        peakTime: { type: String },
+        plateauTime: { type: String }
+      }
+    }
   },
   { _id: false }
 );

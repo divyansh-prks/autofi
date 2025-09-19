@@ -78,11 +78,6 @@ const VideoDemo = ({
             className='aspect-video h-[450px] w-full rounded-2xl'
           />
         </div>
-
-        {/* <source src={src} type='video/mp4' />
-          Your browser does not support the video tag. */}
-
-        {/* Play/Pause Button Overlay */}
       </div>
     </div>
   );

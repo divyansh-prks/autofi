@@ -10,7 +10,7 @@ interface VideoDemoProps {
 }
 
 const VideoDemo = ({
-  src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  src = 'https://www.youtube.com/watch?v=mOWP7G5sn_g',
   poster = '/api/placeholder/800/450',
   className = ''
 }: VideoDemoProps) => {
@@ -63,54 +63,26 @@ const VideoDemo = ({
     };
   }, [hasStarted]);
 
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (isPlaying) {
-      video.pause();
-      setIsPlaying(false);
-    } else {
-      video.play();
-      setIsPlaying(true);
-    }
-  };
-
   return (
     <div ref={containerRef} className={`group relative ${className}`}>
       <div className='video-container relative overflow-hidden rounded-2xl'>
-        <video
-          ref={videoRef}
-          poster={poster}
-          loop
-          muted
-          playsInline
-          className='h-auto w-full object-cover'
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-        >
-          <source src={src} type='video/mp4' />
-          Your browser does not support the video tag.
-        </video>
-
-        {/* Play/Pause Button Overlay */}
-        <div className='absolute inset-0 z-10 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100'>
-          <Button
-            variant='secondary'
-            size='lg'
-            onClick={togglePlay}
-            className='glossy border-white/20 bg-black/20 backdrop-blur-lg hover:bg-black/40'
-          >
-            {isPlaying ? (
-              <Pause className='h-6 w-6 text-white' />
-            ) : (
-              <Play className='ml-1 h-6 w-6 text-white' />
-            )}
-          </Button>
+        <div className='relative overflow-hidden rounded-2xl'>
+          <iframe
+            width='100%'
+            height='450'
+            src='https://www.youtube.com/embed/mOWP7G5sn_g'
+            title='YouTube video player'
+            frameBorder='0'
+            allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+            allowFullScreen
+            className='aspect-video h-[450px] w-full rounded-2xl'
+          />
         </div>
 
-        {/* Gradient overlay for better text contrast */}
-        <div className='pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent' />
+        {/* <source src={src} type='video/mp4' />
+          Your browser does not support the video tag. */}
+
+        {/* Play/Pause Button Overlay */}
       </div>
     </div>
   );

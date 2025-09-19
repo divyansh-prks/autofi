@@ -33,46 +33,6 @@ export default function Header() {
             </Link>
 
             <div className='flex items-center gap-4'>
-              <Card className='bg-card/50 border-border/50 p-0'>
-                <CardContent className='p-3'>
-                  <div className='flex items-center gap-2'>
-                    <Users className='text-primary h-4 w-4' />
-                    <div>
-                      <p className='text-muted-foreground text-xs'>
-                        Subscribers
-                      </p>
-                      <p className='text-sm font-semibold'>100k</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className='bg-card/50 border-border/50 p-0'>
-                <CardContent className='p-3'>
-                  <div className='flex items-center gap-2'>
-                    <Eye className='text-primary h-4 w-4' />
-                    <div>
-                      <p className='text-muted-foreground text-xs'>Avg Views</p>
-                      <p className='text-sm font-semibold'>200M</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className='bg-card/50 border-border/50 p-0'>
-                <CardContent className='p-3'>
-                  <div className='flex items-center gap-2'>
-                    <TrendingUp className='text-primary h-4 w-4' />
-                    <div>
-                      <p className='text-muted-foreground text-xs'>
-                        Engagement
-                      </p>
-                      <p className='text-sm font-semibold'>5%</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               <div className='flex items-center gap-2'>
                 <CtaGithub />
                 <ModeToggle />

@@ -5,8 +5,9 @@ import { auth } from '@clerk/nextjs/server';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: videoId } = await params;
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -16,7 +17,7 @@ export async function GET(
     await connectDB();
 
     const video = (await Video.findOne({
-      _id: params.id,
+      _id: videoId,
       userId
     }).lean()) as IVideo | null;
 

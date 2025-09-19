@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       videos: videos.map((video) => ({
-        id: video._id.toString(),
+        id: (video._id as object).toString(),
         source: video.source,
         title: video.title,
         thumbnail: video.thumbnail,

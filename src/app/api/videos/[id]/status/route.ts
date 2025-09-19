@@ -5,9 +5,10 @@ import { auth } from '@clerk/nextjs/server';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: videoId } = await params;
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,7 +17,7 @@ export async function GET(
     await connectDB();
 
     const video = (await Video.findOne({
-      _id: params.id,
+      _id: videoId,
       userId
     }).lean()) as IVideo | null;
 

@@ -224,9 +224,9 @@ export class AIOptimizer {
         baseTags.push({
           tag: word,
           relevance: Math.floor(Math.random() * 20) + 60,
-          searchVolume: ['high', 'medium', 'low'][
-            Math.floor(Math.random() * 3)
-          ] as const
+          searchVolume: (
+            ['high', 'medium', 'low'] as ('high' | 'medium' | 'low')[]
+          )[Math.floor(Math.random() * 3)]
         });
       }
     });

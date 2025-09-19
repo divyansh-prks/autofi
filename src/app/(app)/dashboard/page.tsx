@@ -25,6 +25,8 @@ export default function Dashboard() {
 
   const [videos, setVideos] = useState<VideoData[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [ytUrl, setYtUrl] = useState('');
+  const [ytLoading, setYtLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +56,58 @@ export default function Dashboard() {
     }
   };
 
+  const extractYouTubeId = (url: string): string | null => {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('youtu.be')) {
+        return u.pathname.slice(1) || null;
+      }
+      if (u.hostname.includes('youtube.com')) {
+        const v = u.searchParams.get('v');
+        if (v) return v;
+        // Shorts or other paths
+        const parts = u.pathname.split('/').filter(Boolean);
+        if (parts[0] === 'shorts' && parts[1]) return parts[1];
+      }
+    } catch {}
+    return null;
+  };
+
+  const handleYouTubeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ytUrl) return;
+    setYtLoading(true);
+    try {
+      const res = await fetch('/api/process-youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: ytUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to process URL');
+
+      const vid = extractYouTubeId(ytUrl) || ytUrl;
+      const thumb = extractYouTubeId(ytUrl)
+        ? `https://img.youtube.com/vi/${extractYouTubeId(ytUrl)}/hqdefault.jpg`
+        : '/placeholder.svg';
+      const title = data?.metadata?.fallback?.title || 'YouTube Video';
+
+      const newVideo: VideoData = {
+        id: vid,
+        url: ytUrl,
+        title,
+        thumbnail: thumb,
+        status: 'completed',
+        progress: 100
+      };
+      setVideos((prev) => [newVideo, ...prev]);
+    } catch (err) {
+      alert((err as Error).message);
+    } finally {
+      setYtLoading(false);
+    }
+  };
+
   return (
     <div className='bg-background min-h-screen'>
       <div className='container mx-auto px-4 py-8'>
@@ -69,6 +123,40 @@ export default function Dashboard() {
             </p>
           </div>
 
+          {/* YouTube URL Form */}
+          <Card className='border-secondary/20 from-card to-muted/20 mb-6 border-2 border-dashed bg-gradient-to-br'>
+            <CardContent className='p-6'>
+              <form onSubmit={handleYouTubeSubmit} className='space-y-4'>
+                <div className='space-y-2'>
+                  <label htmlFor='youtube-url' className='text-sm font-medium'>
+                    Paste YouTube URL
+                  </label>
+                  <div className='flex gap-2'>
+                    <Input
+                      id='youtube-url'
+                      type='url'
+                      placeholder='https://www.youtube.com/watch?v=...'
+                      value={ytUrl}
+                      onChange={(e) => setYtUrl(e.target.value)}
+                      className='text-base'
+                    />
+                    <Button
+                      type='submit'
+                      disabled={!ytUrl || ytLoading}
+                      className='whitespace-nowrap'
+                    >
+                      {ytLoading ? 'Processing…' : 'Analyze URL'}
+                    </Button>
+                  </div>
+                  <p className='text-muted-foreground text-xs'>
+                    We fetch the transcript and generate optimized metadata.
+                  </p>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* File Upload Form */}
           <Card className='border-primary/20 from-card to-muted/20 border-2 border-dashed bg-gradient-to-br'>
             <CardContent className='p-6'>
               <form onSubmit={handleSubmit} className='space-y-4'>

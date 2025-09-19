@@ -15,8 +15,13 @@ import {
 import VideoUploader from '@/components/VideoUploader';
 
 export default function UploadChoice() {
-  const [choice, setChoice] = useState<'video' | 'script' | null>(null);
+  const [choice, setChoice] = useState<'video' | 'script' | 'youtube' | null>(
+    null
+  );
   const [transcriptText, setTranscriptText] = useState('');
+  const [ytUrl, setYtUrl] = useState('');
+  const [ytLoading, setYtLoading] = useState(false);
+  const [ytResult, setYtResult] = useState<any>(null);
 
   const router = useRouter();
 
@@ -75,6 +80,13 @@ export default function UploadChoice() {
                 onClick={() => setChoice('script')}
               >
                 <FileText className='h-5 w-5' /> Upload a Script
+              </Button>
+              <Button
+                className='flex w-full items-center gap-2 py-6 text-lg'
+                variant='outline'
+                onClick={() => setChoice('youtube')}
+              >
+                <IconBrandYoutube className='h-5 w-5' /> Use YouTube URL
               </Button>
             </motion.div>
           )}
@@ -149,6 +161,114 @@ export default function UploadChoice() {
                 placeholder='Paste your script here...'
                 className='w-full rounded-lg border p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none'
               />
+              <Button onClick={() => setChoice(null)}>⬅ Back</Button>
+            </motion.div>
+          )}
+
+          {choice === 'youtube' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className='mt-4 flex flex-col gap-4'
+            >
+              <input
+                type='url'
+                placeholder='Paste YouTube URL (https://...)'
+                value={ytUrl}
+                onChange={(e) => setYtUrl(e.target.value)}
+                className='w-full rounded-lg border p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none'
+              />
+              <Button
+                onClick={async () => {
+                  if (!ytUrl) return;
+                  setYtLoading(true);
+                  setYtResult(null);
+                  try {
+                    const res = await fetch('/api/process-youtube', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ url: ytUrl })
+                    });
+                    const data = await res.json();
+                    setYtResult(data);
+                  } finally {
+                    setYtLoading(false);
+                  }
+                }}
+                disabled={ytLoading || !ytUrl}
+              >
+                {ytLoading ? 'Fetching transcript...' : 'Generate Metadata'}
+              </Button>
+
+              {ytResult && (
+                <div className='mt-2 grid grid-cols-1 gap-6 md:grid-cols-2'>
+                  <div className='rounded-lg border p-4'>
+                    <h3 className='mb-2 font-semibold'>Transcript</h3>
+                    <div className='max-h-[420px] overflow-auto rounded bg-gray-50 p-3 text-sm text-gray-800'>
+                      {ytResult.transcript}
+                    </div>
+                  </div>
+                  <div className='rounded-lg border p-4 md:sticky md:top-4 md:h-fit'>
+                    <h3 className='mb-2 font-semibold'>Generated Metadata</h3>
+                    {ytResult?.metadata?.fallback ? (
+                      <div className='space-y-4'>
+                        <div>
+                          <h4 className='font-medium text-blue-600'>Title</h4>
+                          <p className='text-sm'>
+                            {ytResult.metadata.fallback.title}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className='font-medium text-blue-600'>
+                            Description
+                          </h4>
+                          <p className='text-sm whitespace-pre-wrap'>
+                            {ytResult.metadata.fallback.description}
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className='font-medium text-blue-600'>Tags</h4>
+                          <div className='flex flex-wrap gap-2'>
+                            {ytResult.metadata.fallback.tags.map(
+                              (tag: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className='rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700'
+                                >
+                                  {tag}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                        {ytResult.metadata.fallback.chapters &&
+                          ytResult.metadata.fallback.chapters.length > 0 && (
+                            <div>
+                              <h4 className='font-medium text-blue-600'>
+                                Chapters
+                              </h4>
+                              <ul className='list-inside list-disc text-sm'>
+                                {ytResult.metadata.fallback.chapters.map(
+                                  (chapter: string, index: number) => (
+                                    <li key={index}>{chapter}</li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        <div className='text-xs text-gray-500'>
+                          {ytResult.metadata.raw}
+                        </div>
+                      </div>
+                    ) : (
+                      <pre className='rounded bg-gray-100 p-3 text-sm whitespace-pre-wrap'>
+                        {JSON.stringify(ytResult.metadata, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <Button onClick={() => setChoice(null)}>⬅ Back</Button>
             </motion.div>
           )}

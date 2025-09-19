@@ -29,7 +29,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -41,14 +41,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [clientSecret, setClientSecret] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleConnect = async () => {
     if (!apiKey || !clientSecret) {
-      toast({
-        title: 'Missing credentials',
-        description: 'Please provide both API key and client secret.',
-        variant: 'destructive'
+      toast.error('Missing credentials', {
+        description: 'Please provide both API key and client secret.'
       });
       return;
     }
@@ -59,8 +56,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setTimeout(() => {
       setIsConnected(true);
       setIsLoading(false);
-      toast({
-        title: 'Successfully connected!',
+      toast.success('Successfully connected!', {
         description: 'Your YouTube Studio integration is now active.'
       });
     }, 2000);
@@ -70,8 +66,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setIsConnected(false);
     setApiKey('');
     setClientSecret('');
-    toast({
-      title: 'Disconnected',
+    toast.success('Disconnected', {
       description: 'YouTube Studio integration has been disabled.'
     });
   };

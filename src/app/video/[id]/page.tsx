@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '@/components/user-profile';
 import { ViralityDashboard } from '@/components/virality-dashboard';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface VideoAnalysis {
   id: string;
@@ -263,8 +263,7 @@ export default function VideoDetailPage({
 
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied!',
+    toast.success('Copied!', {
       description: `${type} copied to clipboard`
     });
   };

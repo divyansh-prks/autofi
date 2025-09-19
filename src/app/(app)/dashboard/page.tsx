@@ -1,14 +1,13 @@
 'use client';
 import type React from 'react';
 import { useState } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Play, Youtube, Brain } from 'lucide-react';
-import { SettingsDialog } from '@/components/settings-dialog';
-import { UserProfile } from '@/components/user-profile';
 import type { OptimizationSuggestions } from '@/lib/ai-optimizer';
 import { useRouter } from 'next/navigation';
 interface VideoData {
@@ -25,21 +24,7 @@ export default function Dashboard() {
   const router = useRouter();
 
   const [videos, setVideos] = useState<VideoData[]>([]);
-  const [showSettings, setShowSettings] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-
-  const mockUser = {
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
-    avatar: '/professional-avatar.png',
-    plan: 'pro' as const,
-    stats: {
-      subscribers: '125K',
-      totalViews: '2.4M',
-      avgViews: '45K',
-      engagementRate: '8.2%'
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +39,6 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
       const newId = data.id || data.key || data.fileUrl;
-      console.log('Uploaded file URL:', data.fileUrl);
       const newVideo: VideoData = {
         id: newId,
         url: data.fileUrl,
@@ -70,64 +54,8 @@ export default function Dashboard() {
     }
   };
 
-  const simulateProcessing = async (video: VideoData) => {
-    // Simulate progress updates
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      setVideos((prev) =>
-        prev.map((v) => (v.id === video.id ? { ...v, progress: i } : v))
-      );
-    }
-    // Mark as completed - AI analysis will be triggered in VideoProcessor
-    setVideos((prev) =>
-      prev.map((v) =>
-        v.id === video.id
-          ? {
-              ...v,
-              status: 'completed',
-              title: 'Sample Video Title'
-            }
-          : v
-      )
-    );
-  };
-
   return (
     <div className='bg-background min-h-screen'>
-      {/* Header */}
-      <header className='bg-card/50 sticky top-0 z-50 border-b backdrop-blur-sm'>
-        <div className='container mx-auto px-4 py-4'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
-              <div className='bg-primary flex h-10 w-10 items-center justify-center rounded-lg'>
-                <Youtube className='text-primary-foreground h-6 w-6' />
-              </div>
-              <div>
-                <h1 className='mb-4 text-xl font-bold text-balance'>
-                  YouTube Optimizer
-                </h1>
-                <p className='text-muted-foreground text-sm'>
-                  AI-powered SEO optimization
-                </p>
-              </div>
-            </div>
-
-            <div className='flex items-center gap-4'>
-              {videos.length > 0 && (
-                <Badge variant='outline' className='gap-1'>
-                  {videos.length} video{videos.length !== 1 ? 's' : ''}
-                </Badge>
-              )}
-              <UserProfile
-                user={mockUser}
-                onSettingsClick={() => setShowSettings(true)}
-                onLogoutClick={() => console.log('Logout clicked')}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className='container mx-auto px-4 py-8'>
         {/* URL Input Section */}
         <div className='mx-auto mb-12 max-w-2xl'>
@@ -201,10 +129,12 @@ export default function Dashboard() {
                 >
                   <CardHeader className='p-0'>
                     <div className='bg-muted relative aspect-video overflow-hidden rounded-t-lg'>
-                      <img
+                      <Image
                         src={video.thumbnail || '/placeholder.svg'}
                         alt={video.title}
                         className='h-full w-full object-cover'
+                        width={400}
+                        height={225}
                       />
                       {video.status === 'processing' && (
                         <div className='from-secondary/80 to-secondary/60 absolute inset-0 flex items-center justify-center bg-gradient-to-br'>
@@ -282,7 +212,7 @@ export default function Dashboard() {
                 <Youtube className='text-muted-foreground h-10 w-10' />
               </div>
               <h3 className='mb-2 text-xl font-semibold'>
-                You don't have any video yet
+                You don&apos;t have any video yet
               </h3>
               <p className='text-muted-foreground mb-6'>
                 Start by adding a YouTube URL above to analyze and optimize your
@@ -305,12 +235,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* Video Processor Modal */}
-        {/* Removed as per updates */}
-
-        {/* Settings Dialog */}
-        <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useUser } from '@clerk/nextjs';
+import { toast } from 'sonner';
 import {
   Card,
   CardContent,
@@ -29,7 +31,6 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -37,43 +38,88 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+  const { user } = useUser();
   const [apiKey, setApiKey] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+
+  // Load existing API keys from Clerk unsafeMetadata when dialog opens
+  useEffect(() => {
+    if (open && user) {
+      const existingApiKey = user.unsafeMetadata?.youtubeApiKey as string;
+      const existingClientSecret = user.unsafeMetadata
+        ?.youtubeClientSecret as string;
+
+      if (existingApiKey && existingClientSecret) {
+        setApiKey(existingApiKey);
+        setClientSecret(existingClientSecret);
+        setIsConnected(true);
+      } else {
+        setApiKey('');
+        setClientSecret('');
+        setIsConnected(false);
+      }
+    }
+  }, [open, user]);
 
   const handleConnect = async () => {
     if (!apiKey || !clientSecret) {
-      toast({
-        title: 'Missing credentials',
-        description: 'Please provide both API key and client secret.',
-        variant: 'destructive'
+      toast.error('Missing credentials', {
+        description: 'Please provide both API key and client secret.'
       });
       return;
     }
 
     setIsLoading(true);
 
-    // Simulate API connection
-    setTimeout(() => {
-      setIsConnected(true);
-      setIsLoading(false);
-      toast({
-        title: 'Successfully connected!',
-        description: 'Your YouTube Studio integration is now active.'
+    try {
+      // Store API keys in Clerk unsafeMetadata
+      await user?.update({
+        unsafeMetadata: {
+          ...user.unsafeMetadata,
+          youtubeApiKey: apiKey,
+          youtubeClientSecret: clientSecret
+        }
       });
-    }, 2000);
+
+      setIsConnected(true);
+      toast.success('Successfully connected!', {
+        description:
+          'Your YouTube Studio integration is now active and credentials are stored securely.'
+      });
+    } catch (error) {
+      toast.error('Connection failed', {
+        description: 'Failed to save credentials. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
-    setApiKey('');
-    setClientSecret('');
-    toast({
-      title: 'Disconnected',
-      description: 'YouTube Studio integration has been disabled.'
-    });
+  const handleDisconnect = async () => {
+    try {
+      // Remove API keys from Clerk unsafeMetadata
+      await user?.update({
+        unsafeMetadata: {
+          ...user.unsafeMetadata,
+          youtubeApiKey: undefined,
+          youtubeClientSecret: undefined
+        }
+      });
+
+      setIsConnected(false);
+      setApiKey('');
+      setClientSecret('');
+      toast.success('Disconnected', {
+        description:
+          'YouTube Studio integration has been disabled and credentials removed.'
+      });
+    } catch (error) {
+      toast.error('Disconnection failed', {
+        description: 'Failed to remove credentials. Please try again.'
+      });
+    }
   };
 
   return (
@@ -244,8 +290,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         Enable YouTube Data API v3
                       </h4>
                       <p className='text-muted-foreground mt-1 text-sm'>
-                        In the API Library, search for "YouTube Data API v3" and
-                        enable it for your project.
+                        In the API Library, search for &quot;YouTube Data API
+                        v3&quot; and enable it for your project.
                       </p>
                     </div>
                   </div>

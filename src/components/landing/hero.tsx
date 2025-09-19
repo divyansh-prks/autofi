@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 const Hero = () => {
   return (
-    <section className='relative flex min-h-screen items-center justify-center overflow-hidden'>
+    <section className='relative flex min-h-screen items-center justify-center pb-72'>
       {/* Background with overlay */}
       <div className='absolute inset-0 z-0'>
         <Image
@@ -25,16 +25,16 @@ const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className='relative z-20 mx-auto max-w-6xl px-6 text-center'>
+      <div className='relative top-48 z-20 mx-auto max-w-6xl px-6 text-center'>
         <div className='space-y-8'>
           {/* Badge */}
-          <div className='glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium'>
+          {/* <div className='glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium'>
             <Zap className='text-primary h-4 w-4 animate-pulse' />
             <span>AI-Powered YouTube Automation</span>
-          </div>
+          </div> */}
 
           {/* Main heading */}
-          <h1 className='text-5xl leading-tight font-bold lg:text-7xl'>
+          <h1 className='relative text-5xl leading-tight font-bold lg:text-7xl'>
             <span className='gradient-text'>Supercharge</span> Your
             <br />
             YouTube <span className='text-primary'>Workflow</span>
@@ -48,7 +48,7 @@ const Hero = () => {
           </p>
 
           {/* Video Demo */}
-          <div className='mx-auto mt-12 w-full max-w-4xl'>
+          <div className='mx-auto mt-12 aspect-video w-full max-w-4xl'>
             <VideoDemo className='w-full' poster='/api/placeholder/800/450' />
           </div>
 

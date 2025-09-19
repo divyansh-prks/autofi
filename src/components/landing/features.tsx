@@ -89,63 +89,27 @@ const GSAPFeatures = () => {
   useEffect(() => {
     if (!containerRef.current || !featuresRef.current) return;
 
-    const cards = featuresRef.current.children;
-
-    // Set initial state
-    gsap.set(cards, {
-      x: -200,
-      opacity: 0,
-      scale: 0.8
-    });
-
-    // Create timeline for staggered animation
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: containerRef.current,
-        start: 'top 80%',
-        end: 'bottom 20%',
-        scrub: 1,
-        onUpdate: (self) => {
-          // Progressive reveal based on scroll progress
-          const progress = self.progress;
-          const visibleCount = Math.floor(progress * cards.length);
-
-          Array.from(cards).forEach((card, index) => {
-            if (index <= visibleCount) {
-              gsap.to(card, {
-                x: 0,
-                opacity: 1,
-                scale: 1,
-                duration: 0.6,
-                delay: index * 0.1,
-                ease: 'power2.out'
-              });
-            }
-          });
-        }
-      }
-    });
-
-    // Continuous horizontal scroll animation
-    gsap.to(featuresRef.current, {
-      x: '-50%',
-      duration: 20,
-      repeat: -1,
+    // Set up the horizontal scroll animation
+    const scrollAnimation = gsap.to(featuresRef.current, {
+      x: '-50%', // Animate the container's x property
       ease: 'none',
       scrollTrigger: {
         trigger: containerRef.current,
-        start: 'top bottom',
-        end: 'bottom top',
-        scrub: 1
+        start: 'top top', // Start when the container hits the top of the viewport
+        end: '+=2000', // Scroll for 2000 pixels to complete the animation
+        pin: true, // Pin the container in place while scrolling
+        scrub: 1 // Link the animation progress directly to the scrollbar
       }
     });
 
+    // Cleanup function
     return () => {
-      tl.kill();
+      if (scrollAnimation) {
+        scrollAnimation.kill();
+      }
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
   }, []);
-
   return (
     <section ref={containerRef} className='relative overflow-hidden py-24'>
       <div className='mx-auto mb-16 max-w-7xl px-6'>

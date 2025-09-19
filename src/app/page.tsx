@@ -9,7 +9,7 @@ export default async function Page() {
   const { userId } = await auth();
 
   return (
-    <main className='min-h-screen'>
+    <main className=''>
       <Navigation userId={userId} />
       <Hero />
       <GSAPFeatures />

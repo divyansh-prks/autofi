@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  TranscribeClient,
+  StartTranscriptionJobCommand,
+  GetTranscriptionJobCommand
+} from '@aws-sdk/client-transcribe';
 import crypto from 'crypto';
 import { generateYouTubeMetadata } from '@/lib/metadata';
-import fs from 'fs/promises';
-import os from 'os';
-import path from 'path';
-import { spawn } from 'child_process';
 
 const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+  }
+});
+
+const transcribe = new TranscribeClient({
   region: process.env.AWS_REGION,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -29,7 +38,8 @@ export async function POST(req: NextRequest) {
 
     // Step 1: Upload original video to S3
     const buffer = Buffer.from(await file.arrayBuffer());
-    const key = `${crypto.randomUUID()}-${file.name}`;
+    const id = crypto.randomUUID();
+    const key = `${id}-${file.name}`;
     await s3.send(
       new PutObjectCommand({
         Bucket: process.env.S3_BUCKET!,
@@ -41,46 +51,64 @@ export async function POST(req: NextRequest) {
     const encodedKey = encodeURIComponent(key);
     const fileUrl = `https://${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${encodedKey}`;
 
-    // Step 2: Save video temporarily
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'autofi-'));
-    const tmpPath = path.join(tmpDir, file.name);
-    await fs.writeFile(tmpPath, buffer);
+    // Step 2: Start AWS Transcribe job for the uploaded media
+    const transcriptionJobName = `autofi-${id}`;
+    await transcribe.send(
+      new StartTranscriptionJobCommand({
+        TranscriptionJobName: transcriptionJobName,
+        Media: {
+          MediaFileUri: `s3://${process.env.S3_BUCKET}/${key}`
+        },
+        IdentifyLanguage: true,
+        OutputBucketName: process.env.S3_BUCKET
+      })
+    );
 
-    // Step 3: Call Python Whisper directly
-    const transcriptText = await new Promise<string>((resolve, reject) => {
-      const py = spawn('python3', [
-        '../whisper-backend/transcribe.py',
-        process.env.S3_BUCKET!,
-        key
-      ]);
+    // Step 3: Poll for completion
+    const startedAt = Date.now();
+    const timeoutMs = 5 * 60 * 1000; // up to 5 minutes
+    let transcriptFileUri: string | undefined;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const job = await transcribe.send(
+        new GetTranscriptionJobCommand({
+          TranscriptionJobName: transcriptionJobName
+        })
+      );
+      const status = job.TranscriptionJob?.TranscriptionJobStatus;
+      if (status === 'COMPLETED') {
+        transcriptFileUri = job.TranscriptionJob?.Transcript?.TranscriptFileUri;
+        break;
+      }
+      if (status === 'FAILED') {
+        throw new Error(
+          job.TranscriptionJob?.FailureReason || 'Transcription failed'
+        );
+      }
+      if (Date.now() - startedAt > timeoutMs) {
+        throw new Error('Transcription timed out');
+      }
+      await new Promise((r) => setTimeout(r, 3000));
+    }
 
-      let output = '';
-      let error = '';
+    // Step 4: Fetch transcript JSON and extract text
+    let transcriptText = '';
+    if (transcriptFileUri) {
+      const resp = await fetch(transcriptFileUri);
+      if (!resp.ok) throw new Error('Failed to fetch transcript');
+      const json = (await resp.json()) as any;
+      // Default format from AWS Transcribe
+      transcriptText =
+        json?.results?.transcripts?.map((t: any) => t.transcript).join('\n') ||
+        '';
+    }
 
-      py.stdout.on('data', (data) => {
-        output += data.toString();
-      });
-
-      py.stderr.on('data', (data) => {
-        error += data.toString();
-      });
-
-      py.on('close', (code) => {
-        if (code === 0) {
-          resolve(output.trim());
-        } else {
-          reject(new Error(`Whisper failed: ${error || 'unknown error'}`));
-        }
-      });
-    });
-
-    // Cleanup
-    await fs.rm(tmpDir, { recursive: true, force: true });
-
-    // Step 4: Generate YouTube metadata
+    // Step 5: Generate YouTube metadata from transcript
     const metadata = await generateYouTubeMetadata(transcriptText);
 
     return NextResponse.json({
+      id,
+      key,
       transcript: transcriptText,
       metadata,
       fileUrl

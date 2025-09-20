@@ -3,8 +3,11 @@ Autofi is a tool that automates the workflow for content creators, helping them 
 
 
 
-[![Local System working ](https://img.youtube.com/vi/_TfS_DsXJA0/0.jpg)](https://www.youtube.com/watch?v=_TfS_DsXJA0)
-[![Production side working](https://img.youtube.com/vi/U1NfEQgFUQI/0.jpg)](https://www.youtube.com/watch?v=U1NfEQgFUQI)
+| Local System Working Demo | Production Side Working Demo |
+|---------------------------|------------------------------|
+|Click on the Video Thumbnail ⬇️ | Click on the Video Thumbnail ⬇️ |
+| [![Local System working](https://i9.ytimg.com/vi_webp/_TfS_DsXJA0/mqdefault.webp?v=68ce5126&sqp=CPChucYG&rs=AOn4CLDsXjb6wNqv9Bqbl9PGCFjLzZa4yQ)](https://www.youtube.com/watch?v=_TfS_DsXJA0) | [![Production side working](https://i9.ytimg.com/vi_webp/U1NfEQgFUQI/mqdefault.webp?v=68ce5096&sqp=CMSfucYG&rs=AOn4CLDjLu0KkGL0SjwZApyeEEw3VKaNJg)](https://www.youtube.com/watch?v=U1NfEQgFUQI) |
+
 
 
 

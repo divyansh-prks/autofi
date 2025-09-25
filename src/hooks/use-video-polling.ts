@@ -2,14 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 export interface VideoStatus {
   id: string;
-  status:
-    | 'pending'
-    | 'transcribing'
-    | 'generating_keywords'
-    | 'researching_titles'
-    | 'optimizing_content'
-    | 'completed'
-    | 'failed';
+  status: 'pending' | 'completed' | 'failed';
   progress: number;
   title?: string;
   thumbnail?: string;
@@ -41,7 +34,7 @@ export function useVideoPolling(
   videoId: string | null,
   options: UseVideoPollingOptions = {}
 ) {
-  const { enabled = true, interval = 2000, onComplete, onError } = options;
+  const { enabled = true, interval = 3000, onComplete, onError } = options;
 
   const [video, setVideo] = useState<VideoStatus | null>(null);
   const [loading, setLoading] = useState(false);

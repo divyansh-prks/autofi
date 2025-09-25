@@ -1,14 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 // Video processing status enum
-export type VideoStatus =
-  | 'pending'
-  | 'transcribing'
-  | 'generating_keywords'
-  | 'researching_titles'
-  | 'optimizing_content'
-  | 'completed'
-  | 'failed';
+export type VideoStatus = 'pending' | 'completed' | 'failed';
 
 export type VideoSource = 'youtube' | 'upload';
 
@@ -310,15 +303,7 @@ const VideoSchema = new Schema<IVideo>(
     // Processing
     status: {
       type: String,
-      enum: [
-        'pending',
-        'transcribing',
-        'generating_keywords',
-        'researching_titles',
-        'optimizing_content',
-        'completed',
-        'failed'
-      ],
+      enum: ['pending', 'completed', 'failed'],
       default: 'pending'
     },
     progress: {

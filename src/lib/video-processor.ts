@@ -335,7 +335,6 @@ Return only the keywords as a comma-separated list, no other text.
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    console.log(text);
     return text
       .split(',')
       .map((k) => k.trim())
@@ -735,19 +734,14 @@ Provide realistic but optimistic projections based on content quality.
 // Main processing function
 export async function startVideoProcessing(videoId: string) {
   try {
-    const db = await connectDB();
-    console.log(db);
+    await connectDB();
 
     const video = await Video.findById(videoId);
-    console.log('1');
-    console.log(video);
     if (!video) {
       throw new Error('Video not found');
     }
 
-    // Step 1: Get transcript
-    await updateVideoStatus(videoId, 'transcribing', 10);
-
+    // Get transcript
     let transcript: string | null = null;
 
     if (video.source === 'youtube' && video.youtubeVideoId) {
@@ -772,49 +766,24 @@ export async function startVideoProcessing(videoId: string) {
       throw new Error('Failed to generate transcript');
     }
 
-    await updateVideoStatus(videoId, 'generating_keywords', 30, { transcript });
-
-    // Step 2: Extract keywords
+    // Extract keywords
     const keywords = await extractKeywords(transcript);
-    await updateVideoStatus(videoId, 'generating_keywords', 50, {
-      transcript,
-      'generatedContent.keywords': keywords
-    });
 
-    // Step 3: Generate SEO keywords
+    // Generate SEO keywords
     const seoKeywords = await generateSEOKeywords(transcript, keywords);
-    await updateVideoStatus(videoId, 'researching_titles', 60, {
-      transcript,
-      'generatedContent.keywords': keywords,
-      'generatedContent.seoKeywords': seoKeywords
-    });
 
-    // Step 4: Research YouTube titles
+    // Research YouTube titles
     const youtubeTitles = await researchYouTubeTitles([
       ...keywords,
       ...seoKeywords
     ]);
-    await updateVideoStatus(videoId, 'optimizing_content', 80, {
-      transcript,
-      'generatedContent.keywords': keywords,
-      'generatedContent.seoKeywords': seoKeywords,
-      'generatedContent.youtubeTitles': youtubeTitles
-    });
 
-    // Step 5: Generate optimized content
+    // Generate optimized content
     const optimizedContent = await generateOptimizedContent(
       transcript,
       keywords,
       youtubeTitles
     );
-
-    // Step 6: Generate enhanced analytics and structured data
-    await updateVideoStatus(videoId, 'optimizing_content', 90, {
-      transcript,
-      'generatedContent.keywords': keywords,
-      'generatedContent.seoKeywords': seoKeywords,
-      'generatedContent.youtubeTitles': youtubeTitles
-    });
 
     const basicContent = {
       keywords,

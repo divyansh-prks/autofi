@@ -153,7 +153,7 @@ export function VideoDetailClient({ videoData }: VideoDetailClientProps) {
         <div className='grid gap-8 lg:grid-cols-3'>
           {/* Video Preview */}
           <div className='lg:col-span-1'>
-            <Card className='border-slate-200/60 bg-white/70 shadow-lg backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/70'>
+            <Card className='border-slate-200/60 bg-white/70 p-0 shadow-lg backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/70'>
               <CardContent className='p-0'>
                 <div className='relative aspect-video overflow-hidden rounded-t-lg bg-black'>
                   <Image

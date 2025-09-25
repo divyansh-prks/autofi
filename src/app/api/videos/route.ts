@@ -72,8 +72,7 @@ export async function POST(req: NextRequest) {
 
     await video.save();
 
-    // Start background processing
-    await startVideoProcessing(video._id.toString());
+    startVideoProcessing(video._id.toString());
 
     return NextResponse.json({
       id: video._id.toString(),

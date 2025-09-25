@@ -75,81 +75,10 @@ export function VideoDetailClient({ videoData }: VideoDetailClientProps) {
   const [selectedTitle, setSelectedTitle] = useState<string>('');
   const [selectedDescription, setSelectedDescription] = useState<string>('');
 
-  // Use the provided virality metrics or fallback to defaults
-  const viralityMetrics = videoData.viralityMetrics || {
-    viralityScore: 78,
-    seoScore: 85,
-    engagementPrediction: 82,
-    shareabilityScore: 74,
-    trendingPotential: 89,
-    audienceMatch: 91,
-    competitorComparison: {
-      better: 67,
-      similar: 23,
-      worse: 10
-    },
-    keyFactors: [
-      {
-        factor: 'Trending Keywords',
-        impact: 'high' as const,
-        score: 92,
-        description: 'Uses 3 high-volume trending keywords in tech niche'
-      },
-      {
-        factor: 'Title Hook Strength',
-        impact: 'high' as const,
-        score: 88,
-        description: 'Strong curiosity gap and benefit-driven language'
-      },
-      {
-        factor: 'Thumbnail Potential',
-        impact: 'medium' as const,
-        score: 75,
-        description: 'Good contrast but could use more emotional expression'
-      },
-      {
-        factor: 'Content Length',
-        impact: 'medium' as const,
-        score: 70,
-        description: 'Optimal length for engagement in this category'
-      },
-      {
-        factor: 'Upload Timing',
-        impact: 'low' as const,
-        score: 65,
-        description: 'Posted during moderate traffic hours'
-      }
-    ],
-    predictions: {
-      views24h: '8.2K',
-      views7d: '45.7K',
-      views30d: '127K',
-      peakTime: 'Day 3',
-      plateauTime: 'Week 2'
-    }
-  };
+  // Use provided virality metrics only; avoid static defaults
+  const viralityMetrics = videoData.viralityMetrics;
 
-  const originalMetrics = videoData.originalMetrics || {
-    viralityScore: 45,
-    seoScore: 52,
-    engagementPrediction: 38,
-    shareabilityScore: 41,
-    trendingPotential: 35,
-    audienceMatch: 48,
-    competitorComparison: {
-      better: 25,
-      similar: 35,
-      worse: 40
-    },
-    keyFactors: [],
-    predictions: {
-      views24h: '2.1K',
-      views7d: '12.3K',
-      views30d: '34K',
-      peakTime: 'Day 5',
-      plateauTime: 'Week 3'
-    }
-  };
+  const originalMetrics = videoData.originalMetrics;
 
   useEffect(() => {
     // Use the provided video data

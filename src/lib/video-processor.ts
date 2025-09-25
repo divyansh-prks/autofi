@@ -302,7 +302,7 @@ async function extractKeywords(transcript: string): Promise<string[]> {
     }
 
     const data = await response.json();
-    return data.keywords || [];
+    return Array.isArray(data.keywords) ? data.keywords : [];
   } catch (error) {
     // Silent fail for keyword extraction
     return [];
@@ -315,7 +315,7 @@ async function generateSEOKeywords(
   keywords: string[]
 ): Promise<string[]> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     const prompt = `
 Based on this transcript and extracted keywords, generate 10-15 SEO-optimized keywords for YouTube:
@@ -335,7 +335,7 @@ Return only the keywords as a comma-separated list, no other text.
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-
+    console.log(text);
     return text
       .split(',')
       .map((k) => k.trim())
@@ -372,7 +372,7 @@ async function researchYouTubeTitles(keywords: string[]): Promise<string[]> {
   }
 }
 
-// Generate optimized content
+// Generate optimized content directly via Gemini from transcript
 async function generateOptimizedContent(
   transcript: string,
   keywords: string[],
@@ -383,33 +383,47 @@ async function generateOptimizedContent(
   tags: string[];
 }> {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/generate-optimized-content`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          text: transcript,
-          keywords,
-          trendingTitles: youtubeTitles
-        })
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Content optimization failed');
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
 
-    const data = await response.json();
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+
+    const systemInstruction = `
+You are a YouTube content optimizer. Given a transcript (and optional seed keywords/titles), return JSON only with fields: titles[], descriptions[], tags[].
+titles: array of {title, score, reasoning, viralityIncrease, seoImprovement} (4-6 items)
+descriptions: array of {description, score, reasoning, viralityIncrease, seoImprovement} (2-4 items)
+tags: array of 12-20 relevant SEO tags
+`.trim();
+
+    const userInstruction = `
+TRANSCRIPT (may be truncated):\n${transcript.substring(0, 6000)}\n\n
+EXTRACTED KEYWORDS: ${keywords.slice(0, 20).join(', ')}\n
+REFERENCE TITLES: ${youtubeTitles.slice(0, 10).join(' | ')}\n\n
+Rules:\n- Output strict JSON only. No markdown.\n- Titles ~50-60 chars; mix curiosity and clarity.\n- Descriptions 120-200 words, formatted as paragraphs.\n- Tags are concise, relevant, comma-free strings.\n`.trim();
+
+    const result = await model.generateContent([
+      { text: systemInstruction },
+      { text: userInstruction }
+    ] as any);
+    const response = await result.response;
+    const raw = response.text();
+    const jsonMatch = raw.match(/\{[\s\S]*\}$/);
+    const jsonText = jsonMatch ? jsonMatch[0] : raw;
+    const data = JSON.parse(jsonText);
+
+    const titles = Array.isArray(data.titles) ? data.titles : [];
+    const descriptions = Array.isArray(data.descriptions)
+      ? data.descriptions
+      : [];
+    const tags = Array.isArray(data.tags) ? data.tags : [];
+
     return {
-      suggestedTitles: data.titles || [],
-      suggestedDescription: data.description || '',
-      tags: data.tags || []
+      suggestedTitles: titles.map((t: any) => t?.title).filter(Boolean),
+      suggestedDescription: descriptions[0]?.description || '',
+      tags
     };
   } catch (error) {
-    // Silent fail for content optimization
     return {
       suggestedTitles: [],
       suggestedDescription: '',
@@ -721,9 +735,12 @@ Provide realistic but optimistic projections based on content quality.
 // Main processing function
 export async function startVideoProcessing(videoId: string) {
   try {
-    await connectDB();
+    const db = await connectDB();
+    console.log(db);
 
     const video = await Video.findById(videoId);
+    console.log('1');
+    console.log(video);
     if (!video) {
       throw new Error('Video not found');
     }

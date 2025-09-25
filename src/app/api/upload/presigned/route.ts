@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
 
     // Generate the final S3 URL
     const videoUrl = `https://${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${encodeURIComponent(key)}`;
-
+    console.log('video');
+    console.log(videoUrl);
     return NextResponse.json({
       presignedUrl,
       videoUrl,

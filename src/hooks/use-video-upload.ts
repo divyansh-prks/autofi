@@ -28,13 +28,15 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
             contentType: file.type
           })
         });
-
+        console.log(presignedResponse);
         if (!presignedResponse.ok) {
           throw new Error('Failed to get upload URL');
         }
 
         const { presignedUrl, videoUrl } = await presignedResponse.json();
-
+        console.log('aws');
+        console.log(presignedUrl);
+        console.log(videoUrl);
         setUploadProgress(25);
 
         // Step 2: Upload file to S3
@@ -43,7 +45,9 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
           body: file,
           headers: {
             'Content-Type': file.type
-          }
+          },
+          mode: 'cors',
+          credentials: 'omit'
         });
 
         if (!uploadResponse.ok) {
@@ -67,7 +71,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
         });
 
         if (!videoResponse.ok) {
-          throw new Error('Failed to start video processing');
+          throw new Error('Failed to  video processing');
         }
 
         const { id } = await videoResponse.json();
@@ -108,7 +112,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
             youtubeUrl: url
           })
         });
-
+        console.log(response.ok);
         if (!response.ok) {
           throw new Error('Failed to start YouTube video processing');
         }

@@ -1,18 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  ComprehendClient,
-  DetectKeyPhrasesCommand,
-  DetectEntitiesCommand,
-  DetectSentimentCommand
-} from '@aws-sdk/client-comprehend';
-
-const comprehendClient = new ComprehendClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
-  }
-});
 
 // Enhanced stopwords for better YouTube SEO
 const STOPWORDS = new Set(
@@ -360,10 +346,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const textForComprehend = text.slice(0, 4500);
     let keywords: any[] = [];
-    let meta = { awsComprehend: false, context: null, audience: null } as {
-      awsComprehend: boolean;
+    let meta = { context: null, audience: null } as {
       context: string | null;
       audience: string | null;
     };
@@ -373,139 +357,13 @@ export async function POST(req: NextRequest) {
     meta.context = contentContext.category;
     meta.audience = contentContext.audience;
 
-    // Try AWS Comprehend with enhanced processing
-    try {
-      if (
-        process.env.AWS_REGION &&
-        process.env.AWS_ACCESS_KEY_ID &&
-        process.env.AWS_SECRET_ACCESS_KEY
-      ) {
-        // Extract key phrases
-        const keyPhrasesCmd = new DetectKeyPhrasesCommand({
-          LanguageCode: 'en',
-          Text: textForComprehend
-        });
-        const keyPhrasesResult = await comprehendClient.send(keyPhrasesCmd);
-
-        // Extract entities
-        const entitiesCmd = new DetectEntitiesCommand({
-          LanguageCode: 'en',
-          Text: textForComprehend
-        });
-        const entitiesResult = await comprehendClient.send(entitiesCmd);
-
-        // Get sentiment for context
-        const sentimentCmd = new DetectSentimentCommand({
-          LanguageCode: 'en',
-          Text: textForComprehend
-        });
-        const sentimentResult = await comprehendClient.send(sentimentCmd);
-
-        if (
-          keyPhrasesResult?.KeyPhrases?.length ||
-          entitiesResult?.Entities?.length
-        ) {
-          meta.awsComprehend = true;
-          const scoreMap = new Map<string, number>();
-
-          // Process key phrases with context awareness
-          keyPhrasesResult.KeyPhrases?.forEach((kp) => {
-            const phrase = (kp.Text || '').toLowerCase().trim();
-            if (!phrase || phrase.length < 3) return;
-
-            let score = typeof kp.Score === 'number' ? kp.Score : 0;
-
-            // Boost based on content context
-            if (contentContext.category !== 'general') {
-              const categoryConfig =
-                CONTEXT_CATEGORIES[
-                  contentContext.category as keyof typeof CONTEXT_CATEGORIES
-                ];
-              if (categoryConfig) {
-                for (const contextKeyword of categoryConfig.keywords) {
-                  if (phrase.includes(contextKeyword)) {
-                    score *= categoryConfig.multiplier;
-                  }
-                }
-              }
-            }
-
-            // Boost engagement keywords
-            for (const engagementKeyword of ENGAGEMENT_KEYWORDS) {
-              if (phrase.includes(engagementKeyword)) {
-                score *= 2.0;
-              }
-            }
-
-            scoreMap.set(phrase, Math.max(scoreMap.get(phrase) || 0, score));
-
-            // Include single words from high-scoring phrases
-            const parts = phrase.split(/\s+/).filter(Boolean);
-            if (parts.length > 1 && score > 0.8) {
-              parts.forEach((part) => {
-                if (!STOPWORDS.has(part) && part.length >= 3) {
-                  scoreMap.set(
-                    part,
-                    Math.max(scoreMap.get(part) || 0, score * 0.8)
-                  );
-                }
-              });
-            }
-          });
-
-          // Process entities with high confidence and context relevance
-          entitiesResult.Entities?.forEach((entity) => {
-            const entityText = (entity.Text || '').toLowerCase().trim();
-            if (!entityText || entity.Score! < 0.7) return;
-
-            let entityScore = entity.Score! * 1.3;
-
-            // Boost entities that match content context
-            if (
-              entity.Type === 'PERSON' &&
-              contentContext.category === 'entertainment'
-            ) {
-              entityScore *= 1.5;
-            } else if (
-              entity.Type === 'ORGANIZATION' &&
-              contentContext.category === 'business'
-            ) {
-              entityScore *= 1.5;
-            }
-
-            scoreMap.set(
-              entityText,
-              Math.max(scoreMap.get(entityText) || 0, entityScore)
-            );
-          });
-
-          keywords = Array.from(scoreMap.entries())
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, topK)
-            .map(([k, v]) => ({
-              keyword: k,
-              score: +v.toFixed(4),
-              source: 'comprehend',
-              relevance: v > 0.8 ? 'high' : v > 0.5 ? 'medium' : 'low'
-            }));
-        }
-      }
-    } catch (err) {
-      console.error('AWS Comprehend error:', err);
-    }
-
-    // Fallback with contextual analysis
-    if (!keywords || keywords.length < 15) {
-      const contextualKeywords = extractContextualKeywords(
-        text,
-        contentContext,
-        topK
-      );
-      keywords =
-        keywords.length > 0
-          ? [...keywords, ...contextualKeywords]
-          : contextualKeywords;
-    }
+    // Generate contextual keywords only (Amazon Comprehend removed)
+    const contextualKeywords = extractContextualKeywords(
+      text,
+      contentContext,
+      topK
+    );
+    keywords = contextualKeywords;
 
     // Deduplicate and prioritize high-relevance keywords
     const seen = new Set<string>();

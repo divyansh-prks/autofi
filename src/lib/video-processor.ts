@@ -1,9 +1,25 @@
 import connectDB from '@/lib/db';
 import Video, { VideoStatus } from '@/lib/models/Video';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import {
+  TranscribeClient,
+  StartTranscriptionJobCommand,
+  GetTranscriptionJobCommand
+} from '@aws-sdk/client-transcribe';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+// Initialize AWS Transcribe client
+const transcribeClient = new TranscribeClient({
+  region: process.env.AWS_REGION,
+  credentials: process.env.AWS_ACCESS_KEY_ID
+    ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+      }
+    : undefined
+});
 
 // Enhanced interfaces for structured data
 interface AnalyzedTitle {
@@ -152,8 +168,10 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
   }
 }
 
-// Upload video to Gemini and get transcript
-async function getGeminiTranscript(videoUrl: string): Promise<string | null> {
+// Gemini transcript for URLs (YouTube fallback uses fileData reference)
+async function getGeminiTranscriptFromUrl(
+  videoUrl: string
+): Promise<string | null> {
   try {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
@@ -161,26 +179,105 @@ async function getGeminiTranscript(videoUrl: string): Promise<string | null> {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // For file uploads, we need to handle the video file differently
-    // This is a simplified approach - in production you might want to use Gemini's file API
-    const prompt = `
-Please transcribe this video. Provide only the spoken content as text, without any additional commentary or formatting.
-Video URL: ${videoUrl}
+    const prompt = `Please transcribe this video. Provide only the spoken content as text, with no extras.`;
 
-Note: If you cannot access the video directly, please respond with "TRANSCRIPTION_FAILED"
-`;
-
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent([
+      prompt,
+      { fileData: { fileUri: videoUrl } }
+    ] as any);
     const response = await result.response;
     const text = response.text();
 
-    if (text.includes('TRANSCRIPTION_FAILED') || text.length < 10) {
+    if (!text || text.length < 10) {
       return null;
     }
 
     return text;
   } catch (error) {
     // Silent fail for Gemini transcript
+    return null;
+  }
+}
+
+// Gemini YouTube-specific fallback using fileData and pro model
+async function getGeminiYouTubeTranscript(
+  youtubeUrl: string
+): Promise<string | null> {
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const result = await model.generateContent([
+      'Please transcribe the video in plain text without commentary.',
+      { fileData: { fileUri: youtubeUrl } }
+    ] as any);
+    const response = await result.response;
+    const text = response.text();
+    return text && text.length > 10 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+// Use AWS Transcribe for uploaded videos in S3
+async function getAwsTranscribeTranscriptFromS3Url(
+  videoHttpsUrl: string
+): Promise<string | null> {
+  try {
+    if (!process.env.AWS_REGION) return null;
+
+    // Convert https URL to s3 URI
+    // e.g., https://bucket.s3.region.amazonaws.com/videos/abc.mp4 -> s3://bucket/videos/abc.mp4
+    const url = new URL(videoHttpsUrl);
+    const bucketMatch = url.hostname.match(
+      /^(.*?)\.s3\.[^.]+\.amazonaws\.com$/
+    );
+    if (!bucketMatch) return null;
+    const bucket = bucketMatch[1];
+    const key = decodeURIComponent(url.pathname.replace(/^\//, ''));
+    const mediaUri = `s3://${bucket}/${key}`;
+
+    const jobName = `autofi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    await transcribeClient.send(
+      new StartTranscriptionJobCommand({
+        TranscriptionJobName: jobName,
+        LanguageCode: 'en-US',
+        Media: { MediaFileUri: mediaUri },
+        OutputBucketName: bucket
+      })
+    );
+
+    // Poll for completion
+    const startTime = Date.now();
+    const timeoutMs = 15 * 60 * 1000; // 15 minutes
+    const pollDelayMs = 5000;
+
+    while (true) {
+      const res = await transcribeClient.send(
+        new GetTranscriptionJobCommand({ TranscriptionJobName: jobName })
+      );
+
+      const status = res.TranscriptionJob?.TranscriptionJobStatus;
+      if (status === 'COMPLETED') {
+        const transcriptFileUri =
+          res.TranscriptionJob?.Transcript?.TranscriptFileUri;
+        if (!transcriptFileUri) return null;
+        const resp = await fetch(transcriptFileUri);
+        if (!resp.ok) return null;
+        const json = await resp.json();
+        const text = json?.results?.transcripts?.[0]?.transcript as
+          | string
+          | undefined;
+        return text || null;
+      }
+      if (status === 'FAILED') return null;
+      if (Date.now() - startTime > timeoutMs) return null;
+      await new Promise((r) => setTimeout(r, pollDelayMs));
+    }
+  } catch {
     return null;
   }
 }
@@ -642,11 +739,16 @@ export async function startVideoProcessing(videoId: string) {
 
       // If that fails, try Gemini
       if (!transcript && video.youtubeUrl) {
-        transcript = await getGeminiTranscript(video.youtubeUrl);
+        // Use Gemini pro with fileData reference to the YouTube URL
+        transcript = await getGeminiYouTubeTranscript(video.youtubeUrl);
       }
     } else if (video.source === 'upload' && video.videoUrl) {
-      // For uploaded videos, use Gemini
-      transcript = await getGeminiTranscript(video.videoUrl);
+      // For uploaded videos stored in S3, use AWS Transcribe first
+      transcript = await getAwsTranscribeTranscriptFromS3Url(video.videoUrl);
+      // Fallback to Gemini URL-based transcript if AWS fails
+      if (!transcript) {
+        transcript = await getGeminiTranscriptFromUrl(video.videoUrl);
+      }
     }
 
     if (!transcript) {

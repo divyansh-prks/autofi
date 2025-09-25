@@ -3,6 +3,7 @@ import connectDB from '@/lib/db';
 import Video, { VideoSource } from '@/lib/models/Video';
 import { auth } from '@clerk/nextjs/server';
 import { startVideoProcessing } from '@/lib/video-processor';
+import { getYouTubeVideoInfo } from '@/scripts/youtube-scraper';
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,9 +39,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Extract YouTube video ID if it's a YouTube video
+    // Extract YouTube video ID and fetch video info if it's a YouTube video
     let youtubeVideoId: string | undefined;
     let thumbnail: string | undefined;
+    let scrapedTitle: string | undefined;
+    let scrapedDescription: string | undefined;
 
     if (source === 'youtube' && youtubeUrl) {
       const match = youtubeUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})(?:[&?]|$)/);
@@ -52,6 +55,18 @@ export async function POST(req: NextRequest) {
       }
       youtubeVideoId = match[1];
       thumbnail = `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`;
+
+      // Scrape video info from YouTube
+      try {
+        const videoInfo = await getYouTubeVideoInfo(youtubeUrl);
+        if (videoInfo) {
+          scrapedTitle = videoInfo.title;
+          scrapedDescription = videoInfo.description;
+        }
+      } catch (error) {
+        // Log error but continue with video creation
+        console.warn('Failed to scrape YouTube video info:', error);
+      }
     }
 
     // Create video document
@@ -63,7 +78,10 @@ export async function POST(req: NextRequest) {
       videoUrl: source === 'upload' ? videoUrl : undefined,
       originalFilename: source === 'upload' ? originalFilename : undefined,
       title:
-        title || (source === 'youtube' ? 'YouTube Video' : originalFilename),
+        title ||
+        scrapedTitle ||
+        (source === 'youtube' ? 'YouTube Video' : originalFilename),
+      description: scrapedDescription,
       thumbnail,
       status: 'pending',
       progress: 0,
@@ -113,6 +131,7 @@ export async function GET(req: NextRequest) {
         id: (video._id as object).toString(),
         source: video.source,
         title: video.title,
+        description: video.description,
         thumbnail: video.thumbnail,
         status: video.status,
         progress: video.progress,

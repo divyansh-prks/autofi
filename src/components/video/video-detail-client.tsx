@@ -178,7 +178,7 @@ export function VideoDetailClient({ videoData }: VideoDetailClientProps) {
                       Original Description
                     </h3>
                     <p className='text-muted-foreground line-clamp-3 rounded-lg border border-slate-200/50 bg-slate-50 p-4 text-sm leading-relaxed dark:border-slate-700/50 dark:bg-slate-800/50'>
-                      {video.originalDescription}
+                      {video.originalDescription || 'No description available'}
                     </p>
                   </div>
 

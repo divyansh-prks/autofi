@@ -101,6 +101,7 @@ export interface IVideo extends Document {
 
   // Basic metadata
   title?: string;
+  description?: string;
   thumbnail?: string;
   originalFilename?: string;
 
@@ -290,6 +291,10 @@ const VideoSchema = new Schema<IVideo>(
       type: String,
       trim: true,
       maxlength: [200, 'Title cannot exceed 200 characters']
+    },
+    description: {
+      type: String,
+      trim: true
     },
     thumbnail: {
       type: String,

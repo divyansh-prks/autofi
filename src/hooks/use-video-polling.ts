@@ -5,6 +5,7 @@ export interface VideoStatus {
   status: 'pending' | 'completed' | 'failed';
   progress: number;
   title?: string;
+  description?: string;
   thumbnail?: string;
   source: 'youtube' | 'upload';
   transcript?: string;

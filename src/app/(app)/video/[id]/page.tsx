@@ -31,10 +31,10 @@ export default async function VideoDetailPage({
     const videoData = {
       id: video._id.toString(),
       title: video.title || 'Untitled Video',
-      description: video.generatedContent?.suggestedDescription || '',
+      description: video.description || '',
       thumbnail: video.thumbnail || '/placeholder.svg',
       originalTitle: video.title || 'Untitled Video',
-      originalDescription: video.generatedContent?.suggestedDescription || '',
+      originalDescription: video.description || '',
       suggestedTitles: video.generatedContent?.suggestedTitles || [],
       suggestedDescriptions:
         video.generatedContent?.suggestedDescriptions || [],

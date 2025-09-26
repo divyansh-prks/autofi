@@ -1,624 +1,21 @@
 import connectDB from '@/lib/db';
-import Video, { VideoStatus } from '@/lib/models/Video';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Video, { IVideo } from '@/lib/models/Video';
+import { searchTrendyTitles } from '@/scripts/youtube-search-titles';
+import { getTranscriptWithOpenAI } from './openai';
+import { fetchYouTubeTranscript } from '@/scripts/youtube-transcript';
+import {
+  extractKeywords,
+  generateViralityAnalytics,
+  generateYoutubeSuggestedContent,
+  getGeminiTranscriptFromUrl
+} from './gemini';
+import { generateSEOKeywords } from './seo';
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// Enhanced interfaces for structured data
-interface AnalyzedTitle {
-  title: string;
-  score: number;
-  reasoning: string;
-  viralityIncrease: number;
-  seoImprovement: number;
-}
-
-interface AnalyzedDescription {
-  description: string;
-  score: number;
-  reasoning: string;
-  viralityIncrease: number;
-  seoImprovement: number;
-}
-
-interface ViralityFactor {
-  factor: string;
-  impact: 'high' | 'medium' | 'low';
-  score: number;
-  description: string;
-}
-
-interface ViewPredictions {
-  views24h: string;
-  views7d: string;
-  views30d: string;
-  peakTime: string;
-  plateauTime: string;
-}
-
-interface CompetitorComparison {
-  better: number;
-  similar: number;
-  worse: number;
-}
-
-interface ViralityMetrics {
-  viralityScore: number;
-  seoScore: number;
-  engagementPrediction: number;
-  shareabilityScore: number;
-  trendingPotential: number;
-  audienceMatch: number;
-  competitorComparison: CompetitorComparison;
-  keyFactors: ViralityFactor[];
-  predictions: ViewPredictions;
-}
-
-interface VideoAnalytics {
-  currentViews: string;
-  predictedViews: string;
-  viralityScore: number;
-  seoScore: number;
-  engagementPrediction: string;
-  competitorAnalysis: string;
-}
-
-interface EnhancedGeneratedContent {
-  keywords: string[];
-  seoKeywords: string[];
-  youtubeTitles: string[];
-  suggestedTitles: AnalyzedTitle[];
-  suggestedDescriptions: AnalyzedDescription[];
-  tags: string[];
-  analytics: VideoAnalytics;
-  viralityMetrics: ViralityMetrics;
-  originalMetrics: ViralityMetrics;
-}
-
-// Types for transcript API
-interface ProcessedTranscriptSegment {
-  start: number;
-  dur: number;
-  text: string;
-}
-
-interface YouTubeTranscriptResponse {
-  [key: number]: {
-    tracks: Array<{
-      transcript: ProcessedTranscriptSegment[];
-    }>;
-  };
-}
-
-// Helper function to update video status
-async function updateVideoStatus(
-  videoId: string,
-  status: VideoStatus,
-  progress: number,
-  data: any = {}
-) {
-  await connectDB();
-
-  const updateData: any = {
-    status,
-    progress,
-    ...data
-  };
-
-  if (status === 'completed') {
-    updateData.processingCompletedAt = new Date();
-  }
-
-  if (status === 'failed' && data.errorMessage) {
-    updateData.errorMessage = data.errorMessage;
-  }
-
-  await Video.findByIdAndUpdate(videoId, updateData);
-}
-
-// Fetch transcript from youtube-transcript.io
-async function fetchYouTubeTranscript(videoId: string): Promise<string | null> {
-  try {
-    const API_URL = 'https://www.youtube-transcript.io/api/transcripts';
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Basic 68cd43b37a41edb3465cab17',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ ids: [videoId] })
-    });
-
-    if (!res.ok) {
-      throw new Error(`Transcript API failed: ${res.status}`);
-    }
-
-    const data: YouTubeTranscriptResponse = await res.json();
-
-    if (!data || !data[0].tracks || data[0].tracks.length === 0) {
-      return null;
-    }
-
-    const transcript = data[0].tracks[0].transcript
-      .map((seg) => seg.text)
-      .join(' ');
-
-    return transcript;
-  } catch (error) {
-    // Silent fail for transcript fetching
-    return null;
-  }
-}
-
-// Upload video to Gemini and get transcript
-async function getGeminiTranscript(videoUrl: string): Promise<string | null> {
-  try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    // For file uploads, we need to handle the video file differently
-    // This is a simplified approach - in production you might want to use Gemini's file API
-    const prompt = `
-Please transcribe this video. Provide only the spoken content as text, without any additional commentary or formatting.
-Video URL: ${videoUrl}
-
-Note: If you cannot access the video directly, please respond with "TRANSCRIPTION_FAILED"
-`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    if (text.includes('TRANSCRIPTION_FAILED') || text.length < 10) {
-      return null;
-    }
-
-    return text;
-  } catch (error) {
-    // Silent fail for Gemini transcript
-    return null;
-  }
-}
-
-// Extract keywords from transcript
-async function extractKeywords(transcript: string): Promise<string[]> {
-  try {
-    // Use existing keyword extraction logic
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/extract-keywords`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ text: transcript })
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Keyword extraction failed');
-    }
-
-    const data = await response.json();
-    return data.keywords || [];
-  } catch (error) {
-    // Silent fail for keyword extraction
-    return [];
-  }
-}
-
-// Generate SEO keywords
-async function generateSEOKeywords(
-  transcript: string,
+async function researchYouTubeTrendyTitles(
   keywords: string[]
 ): Promise<string[]> {
-  try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const prompt = `
-Based on this transcript and extracted keywords, generate 10-15 SEO-optimized keywords for YouTube:
-
-Transcript: ${transcript.substring(0, 1000)}...
-Extracted Keywords: ${keywords.join(', ')}
-
-Generate keywords that are:
-1. Highly relevant to the content
-2. Search-friendly for YouTube
-3. Include both broad and specific terms
-4. Mix of short and long-tail keywords
-
-Return only the keywords as a comma-separated list, no other text.
-`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    return text
-      .split(',')
-      .map((k) => k.trim())
-      .filter((k) => k.length > 0);
-  } catch (error) {
-    // Silent fail for SEO keyword generation
-    return [];
-  }
-}
-
-// Research YouTube titles
-async function researchYouTubeTitles(keywords: string[]): Promise<string[]> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/search-titles`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ keywords: keywords.slice(0, 5) })
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Title research failed');
-    }
-
-    const data = await response.json();
-    return data.titles || [];
-  } catch (error) {
-    // Silent fail for title research
-    return [];
-  }
-}
-
-// Generate optimized content
-async function generateOptimizedContent(
-  transcript: string,
-  keywords: string[],
-  youtubeTitles: string[]
-): Promise<{
-  suggestedTitles: string[];
-  suggestedDescription: string;
-  tags: string[];
-}> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/generate-optimized-content`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          text: transcript,
-          keywords,
-          trendingTitles: youtubeTitles
-        })
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Content optimization failed');
-    }
-
-    const data = await response.json();
-    return {
-      suggestedTitles: data.titles || [],
-      suggestedDescription: data.description || '',
-      tags: data.tags || []
-    };
-  } catch (error) {
-    // Silent fail for content optimization
-    return {
-      suggestedTitles: [],
-      suggestedDescription: '',
-      tags: []
-    };
-  }
-}
-
-// Structured LLM call to analyze and score titles
-async function generateAnalyzedTitles(
-  transcript: string,
-  basicTitles: string[],
-  keywords: string[]
-): Promise<AnalyzedTitle[]> {
-  try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json'
-      }
-    });
-
-    const prompt = `
-Analyze and score these YouTube titles for viral potential and SEO effectiveness.
-
-TRANSCRIPT SUMMARY: ${transcript.substring(0, 2000)}...
-KEYWORDS: ${keywords.join(', ')}
-TITLES TO ANALYZE: ${basicTitles.join(' | ')}
-
-For each title, provide detailed analysis in this exact JSON format:
-{
-  "titles": [
-    {
-      "title": "exact title text",
-      "score": 85,
-      "reasoning": "detailed explanation of why this title works",
-      "viralityIncrease": 120,
-      "seoImprovement": 75
-    }
-  ]
-}
-
-Scoring criteria:
-- Score: 0-100 based on click-through potential
-- ViralityIncrease: % increase in viral potential vs generic title
-- SeoImprovement: % improvement in search ranking potential
-
-Consider:
-1. Emotional hooks and curiosity gaps
-2. Keyword density and SEO optimization
-3. Length (ideal 50-60 characters)
-4. Power words and urgency
-5. Target audience alignment
-6. Trending topics and current events
-7. Clarity vs mystery balance
-`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text());
-
-    return data.titles || [];
-  } catch (error) {
-    // Error generating analyzed titles
-    return basicTitles.map((title, index) => ({
-      title,
-      score: 70 + index * 5,
-      reasoning: 'Generated with fallback analysis',
-      viralityIncrease: 50 + index * 20,
-      seoImprovement: 60 + index * 10
-    }));
-  }
-}
-
-// Generate multiple analyzed descriptions
-async function generateAnalyzedDescriptions(
-  transcript: string,
-  keywords: string[],
-  analyzedTitles: AnalyzedTitle[]
-): Promise<AnalyzedDescription[]> {
-  try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json'
-      }
-    });
-
-    const topTitle = analyzedTitles[0]?.title || 'Video Content';
-
-    const prompt = `
-Generate 3 different YouTube video descriptions with detailed analysis.
-
-CONTENT CONTEXT:
-- Title: ${topTitle}
-- Transcript: ${transcript.substring(0, 2000)}...
-- Keywords: ${keywords.join(', ')}
-
-Generate descriptions for different strategies:
-1. SEO-optimized with timestamps and structured format
-2. Engaging storytelling with hooks and CTAs
-3. Benefit-focused with clear value propositions
-
-Return in this exact JSON format:
-{
-  "descriptions": [
-    {
-      "description": "full description text with formatting",
-      "score": 88,
-      "reasoning": "why this description strategy works",
-      "viralityIncrease": 150,
-      "seoImprovement": 90
-    }
-  ]
-}
-
-Each description should:
-- Be 150-200 words with proper formatting
-- Include relevant hashtags
-- Have clear value propositions
-- Use engaging language
-- Include timestamps if applicable
-- Have proper CTAs
-`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text());
-
-    return data.descriptions || [];
-  } catch (error) {
-    // Error generating analyzed descriptions
-    return [
-      {
-        description: 'Engaging video content with valuable insights.',
-        score: 75,
-        reasoning: 'Fallback description generated',
-        viralityIncrease: 80,
-        seoImprovement: 70
-      }
-    ];
-  }
-}
-
-// Generate comprehensive virality metrics and analytics
-async function generateViralityAnalytics(
-  transcript: string,
-  analyzedTitles: AnalyzedTitle[],
-  keywords: string[],
-  originalTitle?: string
-): Promise<{
-  analytics: VideoAnalytics;
-  viralityMetrics: ViralityMetrics;
-  originalMetrics: ViralityMetrics;
-}> {
-  try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json'
-      }
-    });
-
-    const bestTitle =
-      analyzedTitles[0]?.title || originalTitle || 'Video Content';
-
-    const prompt = `
-Analyze this video content for comprehensive virality and SEO metrics.
-
-CONTENT ANALYSIS:
-- Best Title: ${bestTitle}
-- Original Title: ${originalTitle || 'Not provided'}
-- Content: ${transcript.substring(0, 2000)}...
-- Keywords: ${keywords.join(', ')}
-
-Generate comprehensive analytics in this exact JSON format:
-{
-  "analytics": {
-    "currentViews": "12.5K",
-    "predictedViews": "45.2K",
-    "viralityScore": 78,
-    "seoScore": 85,
-    "engagementPrediction": "12.3%",
-    "competitorAnalysis": "Above average performance expected based on keyword analysis"
-  },
-  "viralityMetrics": {
-    "viralityScore": 78,
-    "seoScore": 85,
-    "engagementPrediction": 82,
-    "shareabilityScore": 74,
-    "trendingPotential": 89,
-    "audienceMatch": 91,
-    "competitorComparison": {
-      "better": 67,
-      "similar": 23,
-      "worse": 10
-    },
-    "keyFactors": [
-      {
-        "factor": "Keyword Optimization",
-        "impact": "high",
-        "score": 88,
-        "description": "Strong use of trending keywords in niche"
-      }
-    ],
-    "predictions": {
-      "views24h": "8.2K",
-      "views7d": "45.7K",
-      "views30d": "127K",
-      "peakTime": "Day 3",
-      "plateauTime": "Week 2"
-    }
-  },
-  "originalMetrics": {
-    "viralityScore": 45,
-    "seoScore": 52,
-    "engagementPrediction": 38,
-    "shareabilityScore": 41,
-    "trendingPotential": 35,
-    "audienceMatch": 48,
-    "competitorComparison": {
-      "better": 25,
-      "similar": 35,
-      "worse": 40
-    },
-    "keyFactors": [],
-    "predictions": {
-      "views24h": "2.1K",
-      "views7d": "12.3K",
-      "views30d": "34K",
-      "peakTime": "Day 5",
-      "plateauTime": "Week 3"
-    }
-  }
-}
-
-Analysis should consider:
-1. Content quality and engagement factors
-2. SEO keyword optimization
-3. Title effectiveness and CTR potential
-4. Audience targeting and niche alignment
-5. Trending topic relevance
-6. Competition analysis in the niche
-7. Optimal posting time predictions
-8. Virality factors (shareability, emotional impact)
-
-Provide realistic but optimistic projections based on content quality.
-`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text());
-
-    return {
-      analytics: data.analytics,
-      viralityMetrics: data.viralityMetrics,
-      originalMetrics: data.originalMetrics
-    };
-  } catch (error) {
-    // Error generating virality analytics
-    // Fallback data
-    return {
-      analytics: {
-        currentViews: '5.2K',
-        predictedViews: '18.5K',
-        viralityScore: 65,
-        seoScore: 70,
-        engagementPrediction: '8.5%',
-        competitorAnalysis: 'Average performance expected'
-      },
-      viralityMetrics: {
-        viralityScore: 65,
-        seoScore: 70,
-        engagementPrediction: 68,
-        shareabilityScore: 60,
-        trendingPotential: 72,
-        audienceMatch: 75,
-        competitorComparison: { better: 45, similar: 35, worse: 20 },
-        keyFactors: [],
-        predictions: {
-          views24h: '3.5K',
-          views7d: '15.2K',
-          views30d: '42K',
-          peakTime: 'Day 4',
-          plateauTime: 'Week 2'
-        }
-      },
-      originalMetrics: {
-        viralityScore: 35,
-        seoScore: 40,
-        engagementPrediction: 28,
-        shareabilityScore: 30,
-        trendingPotential: 25,
-        audienceMatch: 35,
-        competitorComparison: { better: 15, similar: 25, worse: 60 },
-        keyFactors: [],
-        predictions: {
-          views24h: '1.2K',
-          views7d: '5.8K',
-          views30d: '15K',
-          peakTime: 'Day 6',
-          plateauTime: 'Week 4'
-        }
-      }
-    };
-  }
+  const trendyTitles = await searchTrendyTitles(keywords);
+  return trendyTitles.slice(0, 20);
 }
 
 // Main processing function
@@ -626,14 +23,12 @@ export async function startVideoProcessing(videoId: string) {
   try {
     await connectDB();
 
-    const video = await Video.findById(videoId);
+    const video = await Video.findById(videoId).lean<IVideo>();
     if (!video) {
       throw new Error('Video not found');
     }
 
-    // Step 1: Get transcript
-    await updateVideoStatus(videoId, 'transcribing', 10);
-
+    // Get transcript
     let transcript: string | null = null;
 
     if (video.source === 'youtube' && video.youtubeVideoId) {
@@ -642,117 +37,63 @@ export async function startVideoProcessing(videoId: string) {
 
       // If that fails, try Gemini
       if (!transcript && video.youtubeUrl) {
-        transcript = await getGeminiTranscript(video.youtubeUrl);
+        transcript = await getGeminiTranscriptFromUrl(video.youtubeUrl);
       }
-    } else if (video.source === 'upload' && video.videoUrl) {
-      // For uploaded videos, use Gemini
-      transcript = await getGeminiTranscript(video.videoUrl);
+    } else if (video.source === 'upload' && video.uploadVideoKey) {
+      // For uploaded videos stored in S3
+      transcript = await getTranscriptWithOpenAI(video.uploadVideoKey);
     }
 
     if (!transcript) {
       throw new Error('Failed to generate transcript');
     }
 
-    await updateVideoStatus(videoId, 'generating_keywords', 30, { transcript });
+    transcript = transcript.trim().slice(0, 30000); // Limit to first 30k chars
 
-    // Step 2: Extract keywords
+    // Extract keywords
     const keywords = await extractKeywords(transcript);
-    await updateVideoStatus(videoId, 'generating_keywords', 50, {
-      transcript,
-      'generatedContent.keywords': keywords
-    });
 
-    // Step 3: Generate SEO keywords
-    const seoKeywords = await generateSEOKeywords(transcript, keywords);
-    await updateVideoStatus(videoId, 'researching_titles', 60, {
-      transcript,
-      'generatedContent.keywords': keywords,
-      'generatedContent.seoKeywords': seoKeywords
-    });
+    // Generate SEO keywords
+    const seoKeywords = await generateSEOKeywords(keywords);
 
-    // Step 4: Research YouTube titles
-    const youtubeTitles = await researchYouTubeTitles([
-      ...keywords,
-      ...seoKeywords
-    ]);
-    await updateVideoStatus(videoId, 'optimizing_content', 80, {
-      transcript,
-      'generatedContent.keywords': keywords,
-      'generatedContent.seoKeywords': seoKeywords,
-      'generatedContent.youtubeTitles': youtubeTitles
-    });
+    // Research YouTube trendy titles
+    const youtubeTrendyTitles = await researchYouTubeTrendyTitles(seoKeywords);
 
-    // Step 5: Generate optimized content
-    const optimizedContent = await generateOptimizedContent(
+    // Generate suggested titles, descriptions, and tags
+    const youtubeSuggestions = await generateYoutubeSuggestedContent(
       transcript,
-      keywords,
-      youtubeTitles
+      youtubeTrendyTitles
     );
 
-    // Step 6: Generate enhanced analytics and structured data
-    await updateVideoStatus(videoId, 'optimizing_content', 90, {
+    // Generate virality and SEO analytics
+    const youtubeAnalytics = await generateViralityAnalytics(
       transcript,
-      'generatedContent.keywords': keywords,
-      'generatedContent.seoKeywords': seoKeywords,
-      'generatedContent.youtubeTitles': youtubeTitles
-    });
+      youtubeSuggestions.suggestedTitles,
+      video.youtubeTitle,
+      video.youtubeCurrentViews
+    );
 
-    const basicContent = {
+    // Update video document with results
+    await Video.findByIdAndUpdate(videoId, {
+      status: 'completed',
+      transcript,
       keywords,
       seoKeywords,
-      youtubeTitles,
-      suggestedTitles: optimizedContent.suggestedTitles,
-      suggestedDescription: optimizedContent.suggestedDescription,
-      tags: optimizedContent.tags
-    };
-
-    // Step 6: Generate enhanced analytics and structured data
-    const videoRecord = await Video.findById(videoId);
-    const originalTitle = videoRecord?.title;
-
-    // Generate analyzed titles with scores and reasoning
-    const analyzedTitles = await generateAnalyzedTitles(
-      transcript,
-      basicContent.suggestedTitles,
-      [...basicContent.keywords, ...basicContent.seoKeywords]
-    );
-
-    // Generate multiple analyzed descriptions
-    const analyzedDescriptions = await generateAnalyzedDescriptions(
-      transcript,
-      [...basicContent.keywords, ...basicContent.seoKeywords],
-      analyzedTitles
-    );
-
-    // Generate comprehensive virality analytics
-    const { analytics, viralityMetrics, originalMetrics } =
-      await generateViralityAnalytics(
-        transcript,
-        analyzedTitles,
-        [...basicContent.keywords, ...basicContent.seoKeywords],
-        originalTitle
-      );
-
-    const enhancedContent: EnhancedGeneratedContent = {
-      keywords: basicContent.keywords,
-      seoKeywords: basicContent.seoKeywords,
-      youtubeTitles: basicContent.youtubeTitles,
-      suggestedTitles: analyzedTitles,
-      suggestedDescriptions: analyzedDescriptions,
-      tags: basicContent.tags,
-      analytics,
-      viralityMetrics,
-      originalMetrics
-    };
-
-    // Complete processing with enhanced data
-    await updateVideoStatus(videoId, 'completed', 100, {
-      transcript,
-      generatedContent: enhancedContent
+      suggestedTitles: youtubeSuggestions.suggestedTitles,
+      suggestedDescriptions: youtubeSuggestions.suggestedDescriptions,
+      suggestedTags: youtubeSuggestions.suggestedTags,
+      youtubeAnalytics,
+      processingCompletedAt: new Date()
     });
+
+    console.log(
+      'Video processing completed successfully for videoId:',
+      videoId
+    );
   } catch (error: any) {
-    // Update video status to failed
-    await updateVideoStatus(videoId, 'failed', 0, {
+    console.error('Video processing failed for videoId:', videoId, error);
+    await Video.findByIdAndUpdate(videoId, {
+      status: 'failed',
       errorMessage: error.message
     });
   }

@@ -17,7 +17,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
         setUploading(true);
         setUploadProgress(0);
 
-        // Step 1: Get presigned URL
+        // Step 1: Get presigned URL (5% progress)
         const presignedResponse = await fetch('/api/upload/presigned', {
           method: 'POST',
           headers: {
@@ -28,31 +28,46 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
             contentType: file.type
           })
         });
-
         if (!presignedResponse.ok) {
           throw new Error('Failed to get upload URL');
         }
 
-        const { presignedUrl, videoUrl } = await presignedResponse.json();
+        const { presignedUrl, key } = await presignedResponse.json();
+        setUploadProgress(5);
 
-        setUploadProgress(25);
+        // Step 2: Upload file to S3 with real-time progress (5% to 85%)
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
 
-        // Step 2: Upload file to S3
-        const uploadResponse = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: file,
-          headers: {
-            'Content-Type': file.type
-          }
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              // Map upload progress from 5% to 85% (80% of total progress)
+              const uploadPercent = (event.loaded / event.total) * 80;
+              setUploadProgress(5 + uploadPercent);
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              setUploadProgress(85);
+              resolve();
+            } else {
+              reject(new Error('Failed to upload file'));
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            reject(new Error('Upload failed'));
+          });
+
+          xhr.open('PUT', presignedUrl);
+          xhr.setRequestHeader('Content-Type', file.type);
+          xhr.send(file);
         });
 
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload file');
-        }
+        // Step 3: Create video processing job (85% to 100%)
+        setUploadProgress(90);
 
-        setUploadProgress(75);
-
-        // Step 3: Create video processing job
         const videoResponse = await fetch('/api/videos', {
           method: 'POST',
           headers: {
@@ -60,9 +75,8 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
           },
           body: JSON.stringify({
             source: 'upload',
-            videoUrl,
-            originalFilename: file.name,
-            title: file.name.replace(/\.[^/.]+$/, '') // Remove extension
+            uploadVideoKey: key,
+            uploadFilename: file.name
           })
         });
 
@@ -72,6 +86,11 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
 
         const { id } = await videoResponse.json();
         setUploadProgress(100);
+
+        // Keep progress at 100% briefly before clearing
+        setTimeout(() => {
+          setUploadProgress(0);
+        }, 1000);
 
         if (onSuccess) {
           onSuccess(id);
@@ -87,7 +106,6 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
         throw error;
       } finally {
         setUploading(false);
-        setUploadProgress(0);
       }
     },
     [onSuccess, onError]
@@ -108,7 +126,6 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
             youtubeUrl: url
           })
         });
-
         if (!response.ok) {
           throw new Error('Failed to start YouTube video processing');
         }

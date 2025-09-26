@@ -16,34 +16,16 @@ export async function GET(
 
     await connectDB();
 
-    const video = (await Video.findOne({
+    const video = await Video.findOne({
       _id: videoId,
       userId
-    }).lean()) as IVideo | null;
+    }).lean<IVideo>();
 
     if (!video) {
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      id: video._id.toString(),
-      source: video.source,
-      youtubeUrl: video.youtubeUrl,
-      youtubeVideoId: video.youtubeVideoId,
-      videoUrl: video.videoUrl,
-      title: video.title,
-      thumbnail: video.thumbnail,
-      originalFilename: video.originalFilename,
-      status: video.status,
-      progress: video.progress,
-      transcript: video.transcript,
-      generatedContent: video.generatedContent,
-      errorMessage: video.errorMessage,
-      processingStartedAt: video.processingStartedAt,
-      processingCompletedAt: video.processingCompletedAt,
-      createdAt: video.createdAt,
-      updatedAt: video.updatedAt
-    });
+    return NextResponse.json(video);
   } catch (error: any) {
     console.error('Error fetching video:', error);
     return NextResponse.json(

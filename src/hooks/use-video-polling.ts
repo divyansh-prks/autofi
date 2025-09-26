@@ -1,39 +1,10 @@
+import { IVideo } from '@/lib/models/Video';
 import { useState, useEffect, useCallback } from 'react';
-
-export interface VideoStatus {
-  id: string;
-  status:
-    | 'pending'
-    | 'transcribing'
-    | 'generating_keywords'
-    | 'researching_titles'
-    | 'optimizing_content'
-    | 'completed'
-    | 'failed';
-  progress: number;
-  title?: string;
-  thumbnail?: string;
-  source: 'youtube' | 'upload';
-  transcript?: string;
-  generatedContent?: {
-    keywords?: string[];
-    seoKeywords?: string[];
-    youtubeTitles?: string[];
-    suggestedTitles?: string[];
-    suggestedDescription?: string;
-    tags?: string[];
-  };
-  errorMessage?: string;
-  processingStartedAt?: string;
-  processingCompletedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface UseVideoPollingOptions {
   enabled?: boolean;
   interval?: number;
-  onComplete?: (video: VideoStatus) => void;
+  onComplete?: (video: IVideo) => void;
   onError?: (error: string) => void;
 }
 
@@ -41,9 +12,9 @@ export function useVideoPolling(
   videoId: string | null,
   options: UseVideoPollingOptions = {}
 ) {
-  const { enabled = true, interval = 2000, onComplete, onError } = options;
+  const { enabled = true, interval = 3000, onComplete, onError } = options;
 
-  const [video, setVideo] = useState<VideoStatus | null>(null);
+  const [video, setVideo] = useState<IVideo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +23,7 @@ export function useVideoPolling(
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/videos/${videoId}/status`);
+      const response = await fetch(`/api/videos/${videoId}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch video status');

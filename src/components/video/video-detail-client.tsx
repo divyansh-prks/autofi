@@ -1,192 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import {
   Youtube,
+  Upload,
   TrendingUp,
   Eye,
   Copy,
-  CheckCircle,
   Zap,
   Target,
   BarChart3,
-  Lightbulb
+  Lightbulb,
+  Star,
+  ArrowLeft,
+  ExternalLink,
+  Clock,
+  Calendar,
+  X
 } from 'lucide-react';
-import { ViralityDashboard } from '@/components/virality-dashboard';
 import { toast } from 'sonner';
+import { formatViewCount } from '@/lib/format';
+import { IVideo } from '@/lib/models/Video';
+import Link from 'next/link';
 
-interface VideoAnalysis {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail: string;
-  originalTitle: string;
-  originalDescription: string;
-  suggestedTitles: Array<{
-    title: string;
-    score: number;
-    reasoning: string;
-    viralityIncrease: number;
-    seoImprovement: number;
-  }>;
-  suggestedDescriptions: Array<{
-    description: string;
-    score: number;
-    reasoning: string;
-    viralityIncrease: number;
-    seoImprovement: number;
-  }>;
-  tags: string[];
-  analytics: {
-    currentViews: string;
-    predictedViews: string;
-    viralityScore: number;
-    seoScore: number;
-    engagementPrediction: string;
-    competitorAnalysis: string;
-  };
-}
-
-interface VideoDetailClientProps {
-  videoData: VideoAnalysis & {
-    status?: string;
-    progress?: number;
-    transcript?: string;
-    source?: string;
-    youtubeUrl?: string;
-    videoUrl?: string;
-    viralityMetrics?: any;
-    originalMetrics?: any;
-  };
-}
-
-export function VideoDetailClient({ videoData }: VideoDetailClientProps) {
-  const router = useRouter();
-  const [video, setVideo] = useState<VideoAnalysis | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedTitle, setSelectedTitle] = useState<string>('');
-  const [selectedDescription, setSelectedDescription] = useState<string>('');
-
-  // Use the provided virality metrics or fallback to defaults
-  const viralityMetrics = videoData.viralityMetrics || {
-    viralityScore: 78,
-    seoScore: 85,
-    engagementPrediction: 82,
-    shareabilityScore: 74,
-    trendingPotential: 89,
-    audienceMatch: 91,
-    competitorComparison: {
-      better: 67,
-      similar: 23,
-      worse: 10
-    },
-    keyFactors: [
-      {
-        factor: 'Trending Keywords',
-        impact: 'high' as const,
-        score: 92,
-        description: 'Uses 3 high-volume trending keywords in tech niche'
-      },
-      {
-        factor: 'Title Hook Strength',
-        impact: 'high' as const,
-        score: 88,
-        description: 'Strong curiosity gap and benefit-driven language'
-      },
-      {
-        factor: 'Thumbnail Potential',
-        impact: 'medium' as const,
-        score: 75,
-        description: 'Good contrast but could use more emotional expression'
-      },
-      {
-        factor: 'Content Length',
-        impact: 'medium' as const,
-        score: 70,
-        description: 'Optimal length for engagement in this category'
-      },
-      {
-        factor: 'Upload Timing',
-        impact: 'low' as const,
-        score: 65,
-        description: 'Posted during moderate traffic hours'
-      }
-    ],
-    predictions: {
-      views24h: '8.2K',
-      views7d: '45.7K',
-      views30d: '127K',
-      peakTime: 'Day 3',
-      plateauTime: 'Week 2'
-    }
-  };
-
-  const originalMetrics = videoData.originalMetrics || {
-    viralityScore: 45,
-    seoScore: 52,
-    engagementPrediction: 38,
-    shareabilityScore: 41,
-    trendingPotential: 35,
-    audienceMatch: 48,
-    competitorComparison: {
-      better: 25,
-      similar: 35,
-      worse: 40
-    },
-    keyFactors: [],
-    predictions: {
-      views24h: '2.1K',
-      views7d: '12.3K',
-      views30d: '34K',
-      peakTime: 'Day 5',
-      plateauTime: 'Week 3'
-    }
-  };
-
-  useEffect(() => {
-    // Use the provided video data
-    const processedVideo: VideoAnalysis = {
-      ...videoData,
-      // Ensure we have the required analytics structure
-      analytics: videoData.analytics || {
-        currentViews: '0',
-        predictedViews: '0',
-        viralityScore: 0,
-        seoScore: 0,
-        engagementPrediction: '0%',
-        competitorAnalysis: 'No analysis available'
-      }
-    };
-
-    setVideo(processedVideo);
-
-    // Set initial selections
-    if (
-      processedVideo.suggestedTitles &&
-      processedVideo.suggestedTitles.length > 0
-    ) {
-      setSelectedTitle(processedVideo.suggestedTitles[0].title);
-    }
-    if (
-      processedVideo.suggestedDescriptions &&
-      processedVideo.suggestedDescriptions.length > 0
-    ) {
-      setSelectedDescription(
-        processedVideo.suggestedDescriptions[0].description
-      );
-    }
-
-    setLoading(false);
-  }, [videoData]);
-
+export function VideoDetailClient({ video }: { video: IVideo }) {
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied!', {
@@ -194,84 +35,271 @@ export function VideoDetailClient({ videoData }: VideoDetailClientProps) {
     });
   };
 
-  if (loading) {
+  const getDisplayTitle = () => {
+    return video.youtubeTitle || video.uploadFilename || 'Video Content';
+  };
+
+  const getDisplayThumbnail = () => {
+    return video.youtubeThumbnail || '/placeholder.svg';
+  };
+
+  const getDisplayDescription = () => {
+    return video.youtubeDescription || '';
+  };
+
+  const getStatusBadge = () => {
+    switch (video.status) {
+      case 'completed':
+        return (
+          <Badge variant='default' className='bg-green-500'>
+            Completed
+          </Badge>
+        );
+      case 'pending':
+        return <Badge variant='secondary'>Processing</Badge>;
+      case 'failed':
+        return <Badge variant='destructive'>Failed</Badge>;
+      default:
+        return <Badge variant='outline'>Unknown</Badge>;
+    }
+  };
+
+  const getImpactColor = (impact: 'high' | 'medium' | 'low') => {
+    switch (impact) {
+      case 'high':
+        return 'text-green-600 bg-green-100';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'low':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  if (video.status === 'pending') {
     return (
-      <div className='bg-background flex min-h-screen items-center justify-center'>
-        <div className='text-center'>
-          <div className='border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-t-transparent' />
-          <p className='text-muted-foreground'>Loading video analysis...</p>
+      <div className='from-background via-background to-muted/20 min-h-screen bg-gradient-to-br'>
+        <div className='container mx-auto px-4 py-8'>
+          <div className='mb-8'>
+            <Link href='/dashboard'>
+              <Button variant='ghost' size='sm' className='mb-4'>
+                <ArrowLeft className='mr-2 h-4 w-4' />
+                Back
+              </Button>
+            </Link>
+            <h1 className='text-3xl font-bold'>{getDisplayTitle()}</h1>
+            <p className='text-muted-foreground mt-2'>
+              Processing your video content...
+            </p>
+          </div>
+
+          <div className='mx-auto max-w-2xl'>
+            <Card className='bg-card border-0 shadow-lg'>
+              <CardContent className='p-8 text-center'>
+                <div className='border-primary/30 border-t-primary mx-auto mb-6 h-16 w-16 animate-spin rounded-full border-4' />
+                <h3 className='mb-2 text-xl font-semibold'>
+                  Analyzing Your Content
+                </h3>
+                <p className='text-muted-foreground mb-6'>
+                  We&apos;re generating optimized titles, descriptions, and
+                  analytics for your video. This usually takes 2-3 minutes.
+                </p>
+                {getStatusBadge()}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!video) {
+  if (video.status === 'failed') {
     return (
-      <div className='bg-background flex min-h-screen items-center justify-center'>
-        <div className='text-center'>
-          <p className='text-muted-foreground'>Video not found</p>
-          <Button onClick={() => router.push('/')} className='mt-4'>
-            Go Back
-          </Button>
+      <div className='from-background via-background to-muted/20 min-h-screen bg-gradient-to-br'>
+        <div className='container mx-auto px-4 py-8'>
+          <div className='mb-8'>
+            <Link href='/dashboard'>
+              <Button variant='ghost' size='sm' className='mb-4'>
+                <ArrowLeft className='mr-2 h-4 w-4' />
+                Back
+              </Button>
+            </Link>
+            <h1 className='text-3xl font-bold'>{getDisplayTitle()}</h1>
+            <p className='text-muted-foreground mt-2'>Processing failed</p>
+          </div>
+
+          <div className='mx-auto max-w-2xl'>
+            <Card className='bg-card border-0 shadow-lg'>
+              <CardContent className='p-8 text-center'>
+                <div className='mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-100'>
+                  <X className='h-8 w-8 text-red-600' />
+                </div>
+                <h3 className='mb-2 text-xl font-semibold'>
+                  Processing Failed
+                </h3>
+                <p className='text-muted-foreground mb-6'>
+                  {video.errorMessage ||
+                    'Something went wrong while processing your video.'}
+                </p>
+                {getStatusBadge()}
+                <div className='mt-6'>
+                  <Link href='/dashboard'>Return to Dashboard</Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900'>
+    <div className='from-background via-background to-muted/20 min-h-screen bg-gradient-to-br'>
       <div className='container mx-auto px-4 py-8'>
+        {/* Header */}
+        <div className='mb-8'>
+          <Link href='/dashboard'>
+            <Button variant='ghost' size='sm' className='mb-4'>
+              <ArrowLeft className='mr-2 h-4 w-4' />
+              Back
+            </Button>
+          </Link>
+          <div className='flex items-start justify-between'>
+            <div>
+              <h1 className='text-3xl font-bold'>{getDisplayTitle()}</h1>
+              <p className='text-muted-foreground mt-2'>
+                AI-powered content optimization results
+              </p>
+            </div>
+            {getStatusBadge()}
+          </div>
+        </div>
+
         <div className='grid gap-8 lg:grid-cols-3'>
           {/* Video Preview */}
           <div className='lg:col-span-1'>
-            <Card className='border-slate-200/60 bg-white/70 shadow-lg backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/70'>
+            <Card className='bg-card gap-0 overflow-hidden border-0 p-0 shadow-lg'>
               <CardContent className='p-0'>
-                <div className='relative aspect-video overflow-hidden rounded-t-lg bg-black'>
+                <div className='relative aspect-video'>
                   <Image
-                    src={video.thumbnail || '/placeholder.svg'}
-                    alt={video.title}
-                    fill
-                    className='object-cover'
+                    src={getDisplayThumbnail()}
+                    alt={getDisplayTitle()}
+                    className='h-full w-full object-cover'
+                    width={400}
+                    height={225}
                   />
+                  {video.source === 'youtube' && (
+                    <div className='absolute top-3 left-3'>
+                      <Badge
+                        variant='secondary'
+                        className='bg-red-600 text-white'
+                      >
+                        <Youtube className='mr-1 h-3 w-3' />
+                        YouTube
+                      </Badge>
+                    </div>
+                  )}
+                  {video.source === 'upload' && (
+                    <div className='absolute top-3 left-3'>
+                      <Badge
+                        variant='secondary'
+                        className='bg-blue-600 text-white'
+                      >
+                        <Upload className='mr-1 h-3 w-3' />
+                        Upload
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-                <div className='space-y-6 p-6'>
-                  <div>
-                    <h3 className='text-muted-foreground mb-3 text-sm font-semibold tracking-wide uppercase'>
-                      Original Title
-                    </h3>
-                    <p className='rounded-lg border border-slate-200/50 bg-slate-50 p-4 text-sm leading-relaxed dark:border-slate-700/50 dark:bg-slate-800/50'>
-                      {video.originalTitle}
-                    </p>
-                  </div>
 
-                  <div>
-                    <h3 className='text-muted-foreground mb-3 text-sm font-semibold tracking-wide uppercase'>
-                      Original Description
-                    </h3>
-                    <p className='text-muted-foreground line-clamp-3 rounded-lg border border-slate-200/50 bg-slate-50 p-4 text-sm leading-relaxed dark:border-slate-700/50 dark:bg-slate-800/50'>
-                      {video.originalDescription}
-                    </p>
+                <div className='space-y-6 p-6'>
+                  {/* Original Content */}
+                  <div className='space-y-4'>
+                    <div className='space-y-2'>
+                      <p className='text-md font-medium'>Original Title:</p>
+                      <p className='text-muted-foreground text-sm'>
+                        {getDisplayTitle()}
+                      </p>
+                    </div>
+                    {getDisplayDescription() && (
+                      <div className='space-y-2'>
+                        <p className='text-md font-medium'>
+                          Original Description:
+                        </p>
+                        <p className='text-muted-foreground line-clamp-3 text-sm'>
+                          {getDisplayDescription()}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Analytics Overview */}
-                  <div className='grid grid-cols-2 gap-6 border-t border-slate-200 pt-6 dark:border-slate-700'>
-                    <div className='rounded-xl border border-blue-200/50 bg-gradient-to-br from-blue-50 to-blue-100 p-4 text-center dark:border-blue-800/50 dark:from-blue-950/50 dark:to-blue-900/50'>
-                      <p className='text-primary mb-1 text-2xl font-bold'>
-                        {video.analytics.currentViews}
-                      </p>
-                      <p className='text-muted-foreground text-xs font-medium'>
-                        Current Views
-                      </p>
+                  {video.youtubeAnalytics && (
+                    <div className='space-y-4 border-t pt-6'>
+                      <h3 className='font-semibold'>Performance Metrics</h3>
+                      <div className='grid grid-cols-2 gap-4'>
+                        <div className='bg-muted/50 rounded-lg p-3 text-center'>
+                          <Eye className='text-primary mx-auto mb-2 h-5 w-5' />
+                          <p className='text-sm font-medium'>Current Views</p>
+                          <p className='text-lg font-bold'>
+                            {formatViewCount(video.youtubeCurrentViews) || '0'}
+                          </p>
+                        </div>
+                        <div className='bg-muted/50 rounded-lg p-3 text-center'>
+                          <TrendingUp className='mx-auto mb-2 h-5 w-5 text-green-600' />
+                          <p className='text-sm font-medium'>Predicted</p>
+                          <p className='text-lg font-bold text-green-600'>
+                            {video.youtubeAnalytics.predictedViews || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Virality Score */}
+                      <div className='space-y-2'>
+                        <div className='flex items-center justify-between'>
+                          <span className='text-sm font-medium'>
+                            Virality Score
+                          </span>
+                          <Badge
+                            variant={
+                              (video.youtubeAnalytics.viralityScore || 0) >= 70
+                                ? 'default'
+                                : (video.youtubeAnalytics.viralityScore || 0) >=
+                                    50
+                                  ? 'secondary'
+                                  : 'destructive'
+                            }
+                          >
+                            {video.youtubeAnalytics.viralityScore || 0}/100
+                          </Badge>
+                        </div>
+                        <div className='bg-muted h-2 w-full rounded-full'>
+                          <div
+                            className='bg-primary h-2 rounded-full transition-all'
+                            style={{
+                              width: `${video.youtubeAnalytics.viralityScore || 0}%`
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className='rounded-xl border border-green-200/50 bg-gradient-to-br from-green-50 to-green-100 p-4 text-center dark:border-green-800/50 dark:from-green-950/50 dark:to-green-900/50'>
-                      <p className='mb-1 text-2xl font-bold text-green-600'>
-                        {video.analytics.predictedViews}
-                      </p>
-                      <p className='text-muted-foreground text-xs font-medium'>
-                        Predicted Views
-                      </p>
+                  )}
+
+                  {/* External Link */}
+                  {video.youtubeUrl && (
+                    <div className='border-t pt-6'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='w-full'
+                        onClick={() => window.open(video.youtubeUrl, '_blank')}
+                      >
+                        <ExternalLink className='mr-2 h-4 w-4' />
+                        View on YouTube
+                      </Button>
                     </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -279,293 +307,372 @@ export function VideoDetailClient({ videoData }: VideoDetailClientProps) {
 
           {/* Main Content */}
           <div className='lg:col-span-2'>
-            <div className='rounded-xl border border-slate-200/60 bg-white/70 p-6 shadow-lg backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/70'>
-              <Tabs defaultValue='analytics' className='space-y-8'>
-                <TabsList className='grid h-12 w-full grid-cols-4 rounded-lg bg-slate-100/80 p-1 dark:bg-slate-800/80'>
-                  <TabsTrigger
-                    value='analytics'
-                    className='gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700'
-                  >
-                    <BarChart3 className='h-4 w-4' />
-                    Analytics
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value='titles'
-                    className='gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700'
-                  >
-                    <Lightbulb className='h-4 w-4' />
-                    Titles
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value='descriptions'
-                    className='gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700'
-                  >
-                    <Target className='h-4 w-4' />
-                    Descriptions
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value='tags'
-                    className='gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-700'
-                  >
-                    <Zap className='h-4 w-4' />
-                    Tags
-                  </TabsTrigger>
-                </TabsList>
+            <Tabs defaultValue='analytics' className='space-y-6'>
+              <TabsList className='grid w-full grid-cols-4'>
+                <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+                <TabsTrigger value='titles'>Titles</TabsTrigger>
+                <TabsTrigger value='descriptions'>Descriptions</TabsTrigger>
+                <TabsTrigger value='tags'>Tags</TabsTrigger>
+              </TabsList>
 
-                {/* Analytics Tab */}
-                <TabsContent value='analytics' className='space-y-6'>
-                  <ViralityDashboard
-                    metrics={viralityMetrics}
-                    originalMetrics={originalMetrics}
-                  />
-                </TabsContent>
+              {/* Analytics */}
+              <TabsContent value='analytics' className='space-y-6'>
+                {video.youtubeAnalytics ? (
+                  <>
+                    {/* Performance Predictions */}
+                    {video.youtubeAnalytics.predictions && (
+                      <Card className='bg-card border-0 shadow-lg'>
+                        <CardHeader>
+                          <CardTitle className='flex items-center gap-2'>
+                            <BarChart3 className='text-primary h-5 w-5' />
+                            View Predictions
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
+                            <div className='bg-muted/50 rounded-lg p-4 text-center'>
+                              <Clock className='mx-auto mb-2 h-5 w-5 text-blue-600' />
+                              <p className='text-sm font-medium'>24 Hours</p>
+                              <p className='text-lg font-bold'>
+                                {video.youtubeAnalytics.predictions.views24h ||
+                                  'N/A'}
+                              </p>
+                            </div>
+                            <div className='bg-muted/50 rounded-lg p-4 text-center'>
+                              <Calendar className='mx-auto mb-2 h-5 w-5 text-green-600' />
+                              <p className='text-sm font-medium'>7 Days</p>
+                              <p className='text-lg font-bold'>
+                                {video.youtubeAnalytics.predictions.views7d ||
+                                  'N/A'}
+                              </p>
+                            </div>
+                            <div className='bg-muted/50 rounded-lg p-4 text-center'>
+                              <TrendingUp className='mx-auto mb-2 h-5 w-5 text-purple-600' />
+                              <p className='text-sm font-medium'>30 Days</p>
+                              <p className='text-lg font-bold'>
+                                {video.youtubeAnalytics.predictions.views30d ||
+                                  'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
-                {/* Titles Tab */}
-                <TabsContent value='titles' className='space-y-8'>
-                  <div className='space-y-6'>
-                    {video.suggestedTitles.map((suggestion, index) => (
-                      <Card
-                        key={index}
-                        className={`cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-xl ${
-                          selectedTitle === suggestion.title
-                            ? 'ring-primary bg-primary/5 dark:bg-primary/10 shadow-lg ring-2 ring-offset-2'
-                            : 'bg-white/80 shadow-md hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800'
-                        } border-slate-200/60 dark:border-slate-700/60`}
-                        onClick={() => setSelectedTitle(suggestion.title)}
-                      >
-                        <CardContent className='p-6'>
-                          <div className='flex items-start justify-between gap-4'>
-                            <div className='flex-1'>
-                              <div className='mb-4 flex flex-wrap items-center gap-2'>
-                                <Badge
-                                  variant={
-                                    index === 0 ? 'default' : 'secondary'
-                                  }
-                                  className='px-3 py-1 text-xs font-semibold'
+                    {/* Key Factors */}
+                    {video.youtubeAnalytics.keyFactors &&
+                      video.youtubeAnalytics.keyFactors.length > 0 && (
+                        <Card className='bg-card border-0 shadow-lg'>
+                          <CardHeader>
+                            <CardTitle className='flex items-center gap-2'>
+                              <Target className='text-primary h-5 w-5' />
+                              Key Performance Factors
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className='space-y-4'>
+                            {video.youtubeAnalytics.keyFactors.map(
+                              (factor, index) => (
+                                <div
+                                  key={index}
+                                  className='bg-muted/30 flex items-start gap-3 rounded-lg p-3'
                                 >
-                                  Score: {suggestion.score}
-                                </Badge>
-                                <Badge
-                                  variant='outline'
-                                  className='gap-1 border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300'
-                                >
-                                  <TrendingUp className='h-3 w-3' />+
-                                  {suggestion.viralityIncrease}% viral
-                                </Badge>
-                                <Badge
-                                  variant='outline'
-                                  className='gap-1 border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
-                                >
-                                  <Eye className='h-3 w-3' />+
-                                  {suggestion.seoImprovement}% SEO
-                                </Badge>
+                                  <Badge
+                                    variant='outline'
+                                    className={`shrink-0 ${getImpactColor(factor.impact)}`}
+                                  >
+                                    {factor.impact.toUpperCase()}
+                                  </Badge>
+                                  <div className='flex-1'>
+                                    <h4 className='font-medium'>
+                                      {factor.factor}
+                                    </h4>
+                                    <p className='text-muted-foreground text-sm'>
+                                      {factor.description}
+                                    </p>
+                                    <div className='mt-2'>
+                                      <div className='flex items-center justify-between text-xs'>
+                                        <span>Impact Score</span>
+                                        <span>{factor.score}/100</span>
+                                      </div>
+                                      <div className='bg-muted mt-1 h-1 w-full rounded-full'>
+                                        <div
+                                          className='bg-primary h-1 rounded-full'
+                                          style={{ width: `${factor.score}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+
+                    {/* Scores Overview */}
+                    <Card className='bg-card border-0 shadow-lg'>
+                      <CardHeader>
+                        <CardTitle className='flex items-center gap-2'>
+                          <Star className='text-primary h-5 w-5' />
+                          Performance Scores
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className='space-y-6'>
+                        <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
+                          <div>
+                            <div className='mb-2 flex items-center justify-between'>
+                              <span className='text-sm font-medium'>
+                                Virality Score
+                              </span>
+                              <span className='text-sm font-bold'>
+                                {video.youtubeAnalytics.viralityScore || 0}
+                                /100
+                              </span>
+                            </div>
+                            <div className='bg-muted h-2 w-full rounded-full'>
+                              <div
+                                className='h-2 rounded-full bg-gradient-to-r from-red-500 to-green-500'
+                                style={{
+                                  width: `${video.youtubeAnalytics.viralityScore || 0}%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className='mb-2 flex items-center justify-between'>
+                              <span className='text-sm font-medium'>
+                                SEO Score
+                              </span>
+                              <span className='text-sm font-bold'>
+                                {video.youtubeAnalytics.seoScore || 0}/100
+                              </span>
+                            </div>
+                            <div className='bg-muted h-2 w-full rounded-full'>
+                              <div
+                                className='h-2 rounded-full bg-gradient-to-r from-yellow-500 to-blue-500'
+                                style={{
+                                  width: `${video.youtubeAnalytics.seoScore || 0}%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                          {video.youtubeAnalytics.shareabilityScore && (
+                            <div>
+                              <div className='mb-2 flex items-center justify-between'>
+                                <span className='text-sm font-medium'>
+                                  Shareability
+                                </span>
+                                <span className='text-sm font-bold'>
+                                  {video.youtubeAnalytics.shareabilityScore}
+                                  /100
+                                </span>
                               </div>
-                              <h4 className='mb-3 text-lg leading-tight font-semibold text-balance'>
+                              <div className='bg-muted h-2 w-full rounded-full'>
+                                <div
+                                  className='h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500'
+                                  style={{
+                                    width: `${video.youtubeAnalytics.shareabilityScore}%`
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {video.youtubeAnalytics.trendingPotential && (
+                            <div>
+                              <div className='mb-2 flex items-center justify-between'>
+                                <span className='text-sm font-medium'>
+                                  Trending Potential
+                                </span>
+                                <span className='text-sm font-bold'>
+                                  {video.youtubeAnalytics.trendingPotential}
+                                  /100
+                                </span>
+                              </div>
+                              <div className='bg-muted h-2 w-full rounded-full'>
+                                <div
+                                  className='h-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500'
+                                  style={{
+                                    width: `${video.youtubeAnalytics.trendingPotential}%`
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  <Card className='bg-card border-0 shadow-lg'>
+                    <CardContent className='p-8 text-center'>
+                      <BarChart3 className='text-muted-foreground mx-auto mb-4 h-12 w-12' />
+                      <h3 className='mb-2 text-lg font-semibold'>
+                        No Analytics Available
+                      </h3>
+                      <p className='text-muted-foreground'>
+                        Analytics data is not available for this video.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Suggested Titles */}
+              <TabsContent value='titles' className='space-y-6'>
+                <Card className='bg-card border-0 shadow-lg'>
+                  <CardHeader>
+                    <CardTitle className='flex items-center gap-2'>
+                      <Lightbulb className='text-primary h-5 w-5' />
+                      SEO Optimized Titles
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className='space-y-4'>
+                    {video.suggestedTitles &&
+                    video.suggestedTitles.length > 0 ? (
+                      video.suggestedTitles.map((suggestion, index) => (
+                        <Card
+                          key={index}
+                          className='border-primary bg-primary/5 cursor-pointer border transition-all'
+                        >
+                          <CardContent className='p-4'>
+                            <div className='mb-2 flex items-start justify-between'>
+                              <h4 className='leading-relaxed font-medium'>
                                 {suggestion.title}
                               </h4>
-                              <p className='text-muted-foreground rounded-lg border border-slate-200/50 bg-slate-50 p-4 text-sm leading-relaxed dark:border-slate-700/50 dark:bg-slate-900/50'>
-                                {suggestion.reasoning}
-                              </p>
+                              <Badge variant='outline'>
+                                {suggestion.score}/100
+                              </Badge>
                             </div>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='shrink-0 hover:bg-slate-100 dark:hover:bg-slate-700'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(suggestion.title, 'Title');
-                              }}
-                            >
-                              <Copy className='h-4 w-4' />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <Card className='border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg dark:border-green-800 dark:from-green-950/50 dark:to-emerald-950/50'>
-                    <CardHeader className='pb-4'>
-                      <CardTitle className='flex items-center gap-2 text-green-700 dark:text-green-300'>
-                        <CheckCircle className='h-5 w-5' />
-                        Selected Title
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-4'>
-                      <Input
-                        value={selectedTitle}
-                        onChange={(e) => setSelectedTitle(e.target.value)}
-                        className='border-green-200 bg-white/80 focus:border-green-400 dark:border-green-700 dark:bg-slate-900/80 dark:focus:border-green-500'
-                      />
-                      <div className='flex gap-3'>
-                        <Button className='gap-2 bg-green-600 text-white hover:bg-green-700'>
-                          <Youtube className='h-4 w-4' />
-                          Update on YouTube
-                        </Button>
-                        <Button
-                          variant='outline'
-                          className='border-green-200 hover:bg-green-50 dark:border-green-700 dark:hover:bg-green-950/50'
-                          onClick={() =>
-                            copyToClipboard(selectedTitle, 'Selected title')
-                          }
-                        >
-                          <Copy className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Descriptions Tab */}
-                <TabsContent value='descriptions' className='space-y-8'>
-                  <div className='space-y-6'>
-                    {video.suggestedDescriptions.map((suggestion, index) => (
-                      <Card
-                        key={index}
-                        className={`cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-xl ${
-                          selectedDescription === suggestion.description
-                            ? 'ring-primary bg-primary/5 dark:bg-primary/10 shadow-lg ring-2 ring-offset-2'
-                            : 'bg-white/80 shadow-md hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800'
-                        } border-slate-200/60 dark:border-slate-700/60`}
-                        onClick={() =>
-                          setSelectedDescription(suggestion.description)
-                        }
-                      >
-                        <CardContent className='p-6'>
-                          <div className='flex items-start justify-between gap-4'>
-                            <div className='flex-1'>
-                              <div className='mb-4 flex flex-wrap items-center gap-2'>
-                                <Badge
-                                  variant={
-                                    index === 0 ? 'default' : 'secondary'
-                                  }
-                                  className='px-3 py-1 text-xs font-semibold'
-                                >
-                                  Score: {suggestion.score}
-                                </Badge>
-                                <Badge
-                                  variant='outline'
-                                  className='gap-1 border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300'
-                                >
-                                  <TrendingUp className='h-3 w-3' />+
-                                  {suggestion.viralityIncrease}% viral
-                                </Badge>
-                                <Badge
-                                  variant='outline'
-                                  className='gap-1 border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
-                                >
-                                  <Eye className='h-3 w-3' />+
-                                  {suggestion.seoImprovement}% SEO
-                                </Badge>
-                              </div>
-                              <div className='mb-4 rounded-lg border border-slate-200/50 bg-slate-50/80 p-4 dark:border-slate-700/50 dark:bg-slate-800/50'>
-                                <p className='line-clamp-4 text-sm leading-relaxed whitespace-pre-line'>
-                                  {suggestion.description}
-                                </p>
-                              </div>
-                              <p className='text-muted-foreground rounded-lg border border-slate-200/50 bg-slate-50 p-4 text-sm leading-relaxed dark:border-slate-700/50 dark:bg-slate-900/50'>
-                                {suggestion.reasoning}
-                              </p>
+                            <p className='text-muted-foreground mb-3 text-sm'>
+                              {suggestion.reasoning}
+                            </p>
+                            <div className='flex gap-4 text-xs'>
+                              <span className='flex items-center gap-1'>
+                                <TrendingUp className='h-3 w-3' />
+                                Virality: +{suggestion.viralityIncrease}%
+                              </span>
+                              <span className='flex items-center gap-1'>
+                                <Target className='h-3 w-3' />
+                                SEO: +{suggestion.seoImprovement}%
+                              </span>
                             </div>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='shrink-0 hover:bg-slate-100 dark:hover:bg-slate-700'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(
-                                  suggestion.description,
-                                  'Description'
-                                );
-                              }}
-                            >
-                              <Copy className='h-4 w-4' />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <p className='text-muted-foreground'>
+                        No suggested titles available.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                  <Card className='border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg dark:border-blue-800 dark:from-blue-950/50 dark:to-indigo-950/50'>
-                    <CardHeader className='pb-4'>
-                      <CardTitle className='flex items-center gap-2 text-blue-700 dark:text-blue-300'>
-                        <CheckCircle className='h-5 w-5' />
-                        Selected Description
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-4'>
-                      <Textarea
-                        value={selectedDescription}
-                        onChange={(e) => setSelectedDescription(e.target.value)}
-                        rows={8}
-                        className='border-blue-200 bg-white/80 focus:border-blue-400 dark:border-blue-700 dark:bg-slate-900/80 dark:focus:border-blue-500'
-                      />
-                      <div className='flex gap-3'>
-                        <Button className='gap-2 bg-blue-600 text-white hover:bg-blue-700'>
-                          <Youtube className='h-4 w-4' />
-                          Update on YouTube
-                        </Button>
-                        <Button
-                          variant='outline'
-                          className='border-blue-200 hover:bg-blue-50 dark:border-blue-700 dark:hover:bg-blue-950/50'
-                          onClick={() =>
-                            copyToClipboard(
-                              selectedDescription,
-                              'Selected description'
-                            )
-                          }
+              {/* Suggested Descriptions */}
+              <TabsContent value='descriptions' className='space-y-6'>
+                <Card className='bg-card border-0 shadow-lg'>
+                  <CardHeader>
+                    <CardTitle className='flex items-center gap-2'>
+                      <Lightbulb className='text-primary h-5 w-5' />
+                      SEO Optimized Descriptions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className='space-y-4'>
+                    {video.suggestedDescriptions &&
+                    video.suggestedDescriptions.length > 0 ? (
+                      video.suggestedDescriptions.map((suggestion, index) => (
+                        <Card
+                          key={index}
+                          className='border-primary bg-primary/5 cursor-pointer border p-0 transition-all'
                         >
-                          <Copy className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                          <CardContent className='p-4'>
+                            <div className='mb-2 flex items-start justify-between'>
+                              <h4 className='font-medium'>
+                                Description {index + 1}
+                              </h4>
+                              <Badge variant='outline'>
+                                {suggestion.score}/100
+                              </Badge>
+                            </div>
+                            <p className='text-muted-foreground mb-3 line-clamp-3 text-sm'>
+                              {suggestion.description}
+                            </p>
+                            <p className='text-muted-foreground mb-3 text-sm'>
+                              {suggestion.reasoning}
+                            </p>
+                            <div className='flex gap-4 text-xs'>
+                              <span className='flex items-center gap-1'>
+                                <TrendingUp className='h-3 w-3' />
+                                Virality: +{suggestion.viralityIncrease}%
+                              </span>
+                              <span className='flex items-center gap-1'>
+                                <Target className='h-3 w-3' />
+                                SEO: +{suggestion.seoImprovement}%
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <p className='text-muted-foreground'>
+                        No suggested descriptions available.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                {/* Tags Tab */}
-                <TabsContent value='tags' className='space-y-8'>
-                  <Card className='border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 shadow-lg dark:border-purple-800 dark:from-purple-950/50 dark:to-pink-950/50'>
-                    <CardHeader className='pb-4'>
-                      <CardTitle className='text-purple-700 dark:text-purple-300'>
-                        Optimized Tags
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className='space-y-6'>
-                      <div className='flex flex-wrap gap-3'>
-                        {video.tags.map((tag, index) => (
+              {/* Tags */}
+              <TabsContent value='tags' className='space-y-6'>
+                <Card className='bg-card border-0 shadow-lg'>
+                  <CardHeader>
+                    <CardTitle className='flex items-center gap-2'>
+                      <Zap className='text-primary h-5 w-5' />
+                      Suggested Tags
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className='space-y-4'>
+                    {video.suggestedTags && video.suggestedTags.length > 0 ? (
+                      <div className='flex flex-wrap gap-2'>
+                        {video.suggestedTags.map((tag, index) => (
                           <Badge
                             key={index}
-                            variant='outline'
-                            className='gap-2 border-purple-200 bg-white/80 px-3 py-2 text-sm transition-colors hover:bg-purple-50 dark:border-purple-700 dark:bg-slate-800/80 dark:hover:bg-purple-950/50'
+                            variant='secondary'
+                            className='hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors'
+                            onClick={() => copyToClipboard(tag, 'Tag')}
                           >
-                            {tag}
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='ml-1 h-5 w-5 rounded-full p-0 hover:bg-purple-100 dark:hover:bg-purple-800'
-                              onClick={() => copyToClipboard(tag, 'Tag')}
-                            >
-                              <Copy className='h-3 w-3' />
-                            </Button>
+                            #{tag}
                           </Badge>
                         ))}
                       </div>
-                      <Button
-                        variant='outline'
-                        onClick={() =>
-                          copyToClipboard(video.tags.join(', '), 'All tags')
-                        }
-                        className='gap-2 border-purple-600 bg-purple-600 text-white hover:bg-purple-700'
-                      >
-                        <Copy className='h-4 w-4' />
-                        Copy All Tags
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </div>
+                    ) : (
+                      <p className='text-muted-foreground'>
+                        No suggested tags available.
+                      </p>
+                    )}
+
+                    {video.suggestedTags && video.suggestedTags.length > 0 && (
+                      <div className='border-t pt-4'>
+                        <Button
+                          variant='outline'
+                          onClick={() =>
+                            copyToClipboard(
+                              video
+                                .suggestedTags!.map((tag) => `#${tag}`)
+                                .join(' '),
+                              'All tags'
+                            )
+                          }
+                        >
+                          <Copy className='mr-2 h-4 w-4' />
+                          Copy All Tags
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

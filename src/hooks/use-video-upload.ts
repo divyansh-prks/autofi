@@ -32,7 +32,7 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
           throw new Error('Failed to get upload URL');
         }
 
-        const { presignedUrl, videoUrl } = await presignedResponse.json();
+        const { presignedUrl, key } = await presignedResponse.json();
         setUploadProgress(5);
 
         // Step 2: Upload file to S3 with real-time progress (5% to 85%)
@@ -75,9 +75,8 @@ export function useVideoUpload(options: UseVideoUploadOptions = {}) {
           },
           body: JSON.stringify({
             source: 'upload',
-            videoUrl,
-            originalFilename: file.name,
-            title: file.name.replace(/\.[^/.]+$/, '') // Remove extension
+            uploadVideoKey: key,
+            uploadFilename: file.name
           })
         });
 

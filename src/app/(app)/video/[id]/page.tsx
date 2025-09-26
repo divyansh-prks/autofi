@@ -27,39 +27,8 @@ export default async function VideoDetailPage({
       notFound();
     }
 
-    // Transform the video data to match the expected interface
-    const videoData = {
-      id: video._id.toString(),
-      title: video.title || 'Untitled Video',
-      description: video.description || '',
-      thumbnail: video.thumbnail || '/placeholder.svg',
-      originalTitle: video.title || 'Untitled Video',
-      originalDescription: video.description || '',
-      suggestedTitles: video.generatedContent?.suggestedTitles || [],
-      suggestedDescriptions:
-        video.generatedContent?.suggestedDescriptions || [],
-      tags: video.generatedContent?.tags || [],
-      analytics: video.generatedContent?.analytics || {
-        currentViews: '0',
-        predictedViews: '0',
-        viralityScore: 0,
-        seoScore: 0,
-        engagementPrediction: '0%',
-        competitorAnalysis: 'No analysis available'
-      },
-      viralityMetrics: video.generatedContent?.viralityMetrics,
-      originalMetrics: video.generatedContent?.originalMetrics,
-      status: video.status,
-      progress: video.progress,
-      transcript: video.transcript,
-      source: video.source,
-      youtubeUrl: video.youtubeUrl,
-      videoUrl: video.videoUrl
-    };
-
-    return <VideoDetailClient videoData={videoData} />;
+    return <VideoDetailClient video={video} />;
   } catch (error) {
-    // Error fetching video
     notFound();
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { auth } from '@clerk/nextjs/server';
 import crypto from 'crypto';
 
 const s3 = new S3Client({
@@ -13,6 +14,11 @@ const s3 = new S3Client({
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { filename, contentType } = await req.json();
 
     if (!filename || !contentType) {
@@ -22,9 +28,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate unique key for the file
+    // Generate unique key for the file with user-specific directory
     const fileId = crypto.randomUUID();
-    const key = `videos/${fileId}-${filename}`;
+    const key = `videos/${userId}/${fileId}-${filename.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
 
     // Create presigned URL for PUT operation
     const command = new PutObjectCommand({
@@ -37,8 +43,7 @@ export async function POST(req: NextRequest) {
 
     // Generate the final S3 URL
     const videoUrl = `https://${process.env.S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${encodeURIComponent(key)}`;
-    console.log('video');
-    console.log(videoUrl);
+
     return NextResponse.json({
       presignedUrl,
       videoUrl,
@@ -46,7 +51,6 @@ export async function POST(req: NextRequest) {
       fileId
     });
   } catch (error: any) {
-    console.error('Error generating presigned URL:', error);
     return NextResponse.json(
       { error: 'Failed to generate presigned URL' },
       { status: 500 }

@@ -4,6 +4,7 @@ interface YouTubeVideoInfo {
   title: string;
   description: string;
   url: string;
+  viewCount?: string;
 }
 
 export class YouTubeScraper {
@@ -90,6 +91,60 @@ export class YouTubeScraper {
       });
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
+      // Extract view count
+      const viewCount = await page.evaluate(() => {
+        // Try multiple selectors for view count
+        const viewSelectors = [
+          '#info-contents #count .view-count',
+          '.view-count',
+          '[class*="view-count"]',
+          '#info .view-count',
+          '#count .view-count',
+          'ytd-video-view-count-renderer #count',
+          'ytd-video-view-count-renderer',
+          '.ytd-video-view-count-renderer #count',
+          '.ytd-video-view-count-renderer',
+          '#info-contents #count',
+          '#count span',
+          '[data-testid="video-view-count"]'
+        ];
+
+        for (const selector of viewSelectors) {
+          const element = document.querySelector(selector);
+          if (element?.textContent?.trim()) {
+            const text = element.textContent.trim();
+            // Check if it contains "views" or numbers
+            if (text.toLowerCase().includes('view') || /[\d,.\s]+/.test(text)) {
+              // Clean up the text to extract just the view count
+              const viewMatch = text.match(/([\d,.\s]+)\s*views?/i);
+              if (viewMatch) {
+                return viewMatch[1].replace(/\s/g, '').trim();
+              }
+              // If no "views" text but contains numbers, return as is
+              if (/^[\d,.\s]+$/.test(text)) {
+                return text.replace(/\s/g, '').trim();
+              }
+            }
+          }
+        }
+
+        // Fallback: search for any element containing view count pattern
+        const allElements = document.querySelectorAll('*');
+        for (let i = 0; i < allElements.length; i++) {
+          const element = allElements[i];
+          if (element.textContent) {
+            const text = element.textContent.trim();
+            const viewMatch = text.match(/^([\d,.\s]+)\s*views?$/i);
+            if (viewMatch && !element.querySelector('*')) {
+              // Make sure it's a leaf node
+              return viewMatch[1].replace(/\s/g, '').trim();
+            }
+          }
+        }
+
+        return null;
+      });
+
       // Extract description
       const description = await page.evaluate(() => {
         // Try multiple selectors for description in order of likelihood
@@ -161,7 +216,8 @@ export class YouTubeScraper {
       return {
         title,
         description,
-        url: youtubeUrl
+        url: youtubeUrl,
+        viewCount: viewCount || undefined
       };
     } catch (error) {
       throw new Error(

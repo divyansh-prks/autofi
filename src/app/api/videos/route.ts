@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     const body = await req.json();
-    const { source, youtubeUrl, videoUrl, originalFilename, title } = body;
+    const { source, youtubeUrl, uploadVideoKey, uploadFilename } = body;
 
     // Validate input based on source
     if (!source || !['youtube', 'upload'].includes(source)) {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (source === 'upload' && !videoUrl) {
+    if (source === 'upload' && !uploadVideoKey) {
       return NextResponse.json(
         { error: 'Video URL is required for uploaded videos' },
         { status: 400 }
@@ -41,9 +41,10 @@ export async function POST(req: NextRequest) {
 
     // Extract YouTube video ID and fetch video info if it's a YouTube video
     let youtubeVideoId: string | undefined;
-    let thumbnail: string | undefined;
-    let scrapedTitle: string | undefined;
-    let scrapedDescription: string | undefined;
+    let youtubeThumbnail: string | undefined;
+    let youtubeTitle: string | undefined;
+    let youtubeDescription: string | undefined;
+    let youtubeCurrentViews: string | undefined;
 
     if (source === 'youtube' && youtubeUrl) {
       const match = youtubeUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})(?:[&?]|$)/);
@@ -54,14 +55,15 @@ export async function POST(req: NextRequest) {
         );
       }
       youtubeVideoId = match[1];
-      thumbnail = `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`;
+      youtubeThumbnail = `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`;
 
       // Scrape video info from YouTube
       try {
         const videoInfo = await getYouTubeVideoInfo(youtubeUrl);
         if (videoInfo) {
-          scrapedTitle = videoInfo.title;
-          scrapedDescription = videoInfo.description;
+          youtubeTitle = videoInfo.title;
+          youtubeDescription = videoInfo.description;
+          youtubeCurrentViews = videoInfo.viewCount;
         }
       } catch (error) {
         // Log error but continue with video creation
@@ -75,16 +77,13 @@ export async function POST(req: NextRequest) {
       source: source as VideoSource,
       youtubeUrl: source === 'youtube' ? youtubeUrl : undefined,
       youtubeVideoId,
-      videoUrl: source === 'upload' ? videoUrl : undefined,
-      originalFilename: source === 'upload' ? originalFilename : undefined,
-      title:
-        title ||
-        scrapedTitle ||
-        (source === 'youtube' ? 'YouTube Video' : originalFilename),
-      description: scrapedDescription,
-      thumbnail,
+      youtubeTitle,
+      youtubeDescription,
+      youtubeThumbnail,
+      youtubeCurrentViews,
+      uploadVideoKey: source === 'upload' ? uploadVideoKey : undefined,
+      uploadFilename: source === 'upload' ? uploadFilename : undefined,
       status: 'pending',
-      progress: 0,
       processingStartedAt: new Date()
     });
 
@@ -95,7 +94,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: video._id.toString(),
       status: video.status,
-      progress: video.progress,
       message: 'Video processing started'
     });
   } catch (error: any) {
@@ -130,13 +128,26 @@ export async function GET(req: NextRequest) {
       videos: videos.map((video) => ({
         id: (video._id as object).toString(),
         source: video.source,
-        title: video.title,
-        description: video.description,
-        thumbnail: video.thumbnail,
+        youtubeUrl: video.youtubeUrl,
+        youtubeVideoId: video.youtubeVideoId,
+        youtubeTitle: video.youtubeTitle,
+        youtubeDescription: video.youtubeDescription,
+        youtubeThumbnail: video.youtubeThumbnail,
+        youtubeCurrentViews: video.youtubeCurrentViews,
+        uploadVideoKey: video.uploadVideoKey,
+        uploadFilename: video.uploadFilename,
         status: video.status,
-        progress: video.progress,
+        transcript: video.transcript,
+        keywords: video.keywords,
+        seoKeywords: video.seoKeywords,
+        suggestedTitles: video.suggestedTitles,
+        suggestedDescriptions: video.suggestedDescriptions,
+        suggestedTags: video.suggestedTags,
+        youtubeAnalytics: video.youtubeAnalytics,
         createdAt: video.createdAt,
-        processingCompletedAt: video.processingCompletedAt
+        processingStartedAt: video.processingStartedAt,
+        processingCompletedAt: video.processingCompletedAt,
+        errorMessage: video.errorMessage
       })),
       page,
       limit

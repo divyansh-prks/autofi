@@ -1,130 +1,141 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-// Video processing status enum
 export type VideoStatus = 'pending' | 'completed' | 'failed';
 
 export type VideoSource = 'youtube' | 'upload';
 
-// Generated content interface
-export interface IGeneratedContent {
-  keywords?: string[];
-  seoKeywords?: string[];
-  youtubeTitles?: string[];
-  suggestedTitles?: Array<{
-    title: string;
+export interface SuggestedTitle {
+  title: string;
+  score: number;
+  reasoning: string;
+  viralityIncrease: number;
+  seoImprovement: number;
+}
+
+export interface SuggestedDescription {
+  description: string;
+  score: number;
+  reasoning: string;
+  viralityIncrease: number;
+  seoImprovement: number;
+}
+
+export interface YoutubeAnalytics {
+  predictedViews?: number;
+  viralityScore?: number;
+  seoScore?: number;
+  engagementPrediction?: number;
+  shareabilityScore?: number;
+  trendingPotential?: number;
+  keyFactors?: {
+    factor: string;
+    impact: 'high' | 'medium' | 'low';
     score: number;
-    reasoning: string;
-    viralityIncrease: number;
-    seoImprovement: number;
-  }>;
-  suggestedDescriptions?: Array<{
     description: string;
-    score: number;
-    reasoning: string;
-    viralityIncrease: number;
-    seoImprovement: number;
-  }>;
-  suggestedDescription?: string; // Keep for backward compatibility
-  tags?: string[];
-  analytics?: {
-    currentViews: string;
-    predictedViews: string;
-    viralityScore: number;
-    seoScore: number;
-    engagementPrediction: string;
-    competitorAnalysis: string;
-  };
-  viralityMetrics?: {
-    viralityScore: number;
-    seoScore: number;
-    engagementPrediction: number;
-    shareabilityScore: number;
-    trendingPotential: number;
-    audienceMatch: number;
-    competitorComparison: {
-      better: number;
-      similar: number;
-      worse: number;
-    };
-    keyFactors: Array<{
-      factor: string;
-      impact: 'high' | 'medium' | 'low';
-      score: number;
-      description: string;
-    }>;
-    predictions: {
-      views24h: string;
-      views7d: string;
-      views30d: string;
-      peakTime: string;
-      plateauTime: string;
-    };
-  };
-  originalMetrics?: {
-    viralityScore: number;
-    seoScore: number;
-    engagementPrediction: number;
-    shareabilityScore: number;
-    trendingPotential: number;
-    audienceMatch: number;
-    competitorComparison: {
-      better: number;
-      similar: number;
-      worse: number;
-    };
-    keyFactors: Array<{
-      factor: string;
-      impact: 'high' | 'medium' | 'low';
-      score: number;
-      description: string;
-    }>;
-    predictions: {
-      views24h: string;
-      views7d: string;
-      views30d: string;
-      peakTime: string;
-      plateauTime: string;
-    };
+  }[];
+  predictions?: {
+    views24h?: number;
+    views7d?: number;
+    views30d?: number;
   };
 }
 
-// Video document interface
 export interface IVideo extends Document {
   _id: mongoose.Types.ObjectId;
   userId: string;
   source: VideoSource;
-
-  // Source-specific data
   youtubeUrl?: string;
   youtubeVideoId?: string;
-  videoUrl?: string; // S3 URL for uploaded videos
-
-  // Basic metadata
-  title?: string;
-  description?: string;
-  thumbnail?: string;
-  originalFilename?: string;
-
-  // Processing status
+  youtubeCurrentViews?: string;
+  youtubeTitle?: string;
+  youtubeDescription?: string;
+  youtubeThumbnail?: string;
+  uploadVideoKey?: string;
+  uploadFilename?: string;
   status: VideoStatus;
-  progress: number; // 0-100
-
-  // Processing results
   transcript?: string;
-  generatedContent?: IGeneratedContent;
-
-  // Timestamps and error handling
+  keywords: string[];
+  seoKeywords: string[];
+  suggestedTitles: SuggestedTitle[];
+  suggestedDescriptions: SuggestedDescription[];
+  suggestedTags: string[];
+  youtubeAnalytics?: YoutubeAnalytics;
   processingStartedAt?: Date;
   processingCompletedAt?: Date;
   errorMessage?: string;
-
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Generated content schema
-const GeneratedContentSchema = new Schema(
+const VideoSchema = new Schema<IVideo>(
   {
+    userId: {
+      type: String,
+      required: [true, 'User ID is required'],
+      index: true
+    },
+    source: {
+      type: String,
+      enum: ['youtube', 'upload'],
+      required: [true, 'Source is required'],
+      index: true
+    },
+    youtubeUrl: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (this: IVideo, v: string) {
+          if (this.source === 'youtube') {
+            return !!(v && v.length > 0);
+          }
+          return true;
+        },
+        message: 'YouTube URL is required for YouTube videos'
+      }
+    },
+    youtubeVideoId: {
+      type: String,
+      trim: true
+    },
+    youtubeCurrentViews: { type: String },
+    youtubeTitle: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Title cannot exceed 200 characters']
+    },
+    youtubeDescription: {
+      type: String,
+      trim: true
+    },
+    youtubeThumbnail: {
+      type: String,
+      trim: true
+    },
+    uploadVideoKey: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (this: IVideo, v: string) {
+          if (this.source === 'upload') {
+            return !!(v && v.length > 0);
+          }
+          return true;
+        },
+        message: 'Video Key is required for uploaded videos'
+      }
+    },
+    uploadFilename: {
+      type: String,
+      trim: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed'],
+      default: 'pending'
+    },
+    transcript: {
+      type: String
+    },
     keywords: [
       {
         type: String,
@@ -132,12 +143,6 @@ const GeneratedContentSchema = new Schema(
       }
     ],
     seoKeywords: [
-      {
-        type: String,
-        trim: true
-      }
-    ],
-    youtubeTitles: [
       {
         type: String,
         trim: true
@@ -161,36 +166,19 @@ const GeneratedContentSchema = new Schema(
         seoImprovement: { type: Number }
       }
     ],
-    suggestedDescription: {
-      type: String,
-      trim: true
-    },
-    tags: [
+    suggestedTags: [
       {
         type: String,
         trim: true
       }
     ],
-    analytics: {
-      currentViews: { type: String },
-      predictedViews: { type: String },
-      viralityScore: { type: Number },
-      seoScore: { type: Number },
-      engagementPrediction: { type: String },
-      competitorAnalysis: { type: String }
-    },
-    viralityMetrics: {
+    youtubeAnalytics: {
+      predictedViews: { type: Number },
       viralityScore: { type: Number },
       seoScore: { type: Number },
       engagementPrediction: { type: Number },
       shareabilityScore: { type: Number },
       trendingPotential: { type: Number },
-      audienceMatch: { type: Number },
-      competitorComparison: {
-        better: { type: Number },
-        similar: { type: Number },
-        worse: { type: Number }
-      },
       keyFactors: [
         {
           factor: { type: String },
@@ -200,131 +188,11 @@ const GeneratedContentSchema = new Schema(
         }
       ],
       predictions: {
-        views24h: { type: String },
-        views7d: { type: String },
-        views30d: { type: String },
-        peakTime: { type: String },
-        plateauTime: { type: String }
+        views24h: { type: Number },
+        views7d: { type: Number },
+        views30d: { type: Number }
       }
     },
-    originalMetrics: {
-      viralityScore: { type: Number },
-      seoScore: { type: Number },
-      engagementPrediction: { type: Number },
-      shareabilityScore: { type: Number },
-      trendingPotential: { type: Number },
-      audienceMatch: { type: Number },
-      competitorComparison: {
-        better: { type: Number },
-        similar: { type: Number },
-        worse: { type: Number }
-      },
-      keyFactors: [
-        {
-          factor: { type: String },
-          impact: { type: String, enum: ['high', 'medium', 'low'] },
-          score: { type: Number },
-          description: { type: String }
-        }
-      ],
-      predictions: {
-        views24h: { type: String },
-        views7d: { type: String },
-        views30d: { type: String },
-        peakTime: { type: String },
-        plateauTime: { type: String }
-      }
-    }
-  },
-  { _id: false }
-);
-
-// Main Video schema
-const VideoSchema = new Schema<IVideo>(
-  {
-    userId: {
-      type: String, // Changed from Schema.Types.ObjectId to String for Clerk integration
-      required: [true, 'User ID is required'],
-      index: true
-    },
-    source: {
-      type: String,
-      enum: ['youtube', 'upload'],
-      required: [true, 'Source is required'],
-      index: true
-    },
-
-    // Source-specific fields
-    youtubeUrl: {
-      type: String,
-      trim: true,
-      validate: {
-        validator: function (this: IVideo, v: string) {
-          if (this.source === 'youtube') {
-            return !!(v && v.length > 0);
-          }
-          return true;
-        },
-        message: 'YouTube URL is required for YouTube videos'
-      }
-    },
-    youtubeVideoId: {
-      type: String,
-      trim: true
-    },
-    videoUrl: {
-      type: String,
-      trim: true,
-      validate: {
-        validator: function (this: IVideo, v: string) {
-          if (this.source === 'upload') {
-            return !!(v && v.length > 0);
-          }
-          return true;
-        },
-        message: 'Video URL is required for uploaded videos'
-      }
-    },
-
-    // Metadata
-    title: {
-      type: String,
-      trim: true,
-      maxlength: [200, 'Title cannot exceed 200 characters']
-    },
-    description: {
-      type: String,
-      trim: true
-    },
-    thumbnail: {
-      type: String,
-      trim: true
-    },
-    originalFilename: {
-      type: String,
-      trim: true
-    },
-
-    // Processing
-    status: {
-      type: String,
-      enum: ['pending', 'completed', 'failed'],
-      default: 'pending'
-    },
-    progress: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 0
-    },
-
-    // Results
-    transcript: {
-      type: String
-    },
-    generatedContent: GeneratedContentSchema,
-
-    // Timestamps
     processingStartedAt: {
       type: Date
     },
@@ -342,15 +210,6 @@ const VideoSchema = new Schema<IVideo>(
 
 // Indexes for better query performance
 VideoSchema.index({ userId: 1, createdAt: -1 });
-VideoSchema.index({ status: 1 });
-VideoSchema.index({ source: 1, status: 1 });
-
-// Text search on transcript and title
-VideoSchema.index({
-  title: 'text',
-  transcript: 'text',
-  'generatedContent.suggestedDescription': 'text'
-});
 
 // Export the model
 const Video =
